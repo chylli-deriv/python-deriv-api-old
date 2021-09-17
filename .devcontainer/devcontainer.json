@@ -7,7 +7,7 @@
 			// Update 'VARIANT' to pick a Python version: 3, 3.9, 3.8, 3.7, 3.6.
 			// Append -bullseye or -buster to pin to an OS version.
 			// Use the -bullseye variants if you are on a M1 mac.
-			"VARIANT": "3.8",
+			"VARIANT": "3.9",
 			// Options
 			"NODE_VERSION": "lts/*"
 		}
@@ -40,7 +40,7 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "pip3 install --user -r requirements.txt",
+	"postCreateCommand": "pip install --user pipenv && pipenv install",
 
 	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "vscode"
