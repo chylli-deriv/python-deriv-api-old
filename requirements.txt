@@ -7,4 +7,5 @@ pyparsing==2.4.7
 pytest==6.2.5
 pytest-runner==5.3.1
 toml==0.10.2
-websockets==10.0
+websocket-client==1.2.1
+pytest-mock==3.6.1
