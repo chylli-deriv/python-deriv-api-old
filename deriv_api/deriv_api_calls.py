@@ -5520,17 +5520,25 @@ class DerivAPICalls:
         return self.processRequest(allArgs)
 
     def processRequest(self, allArgs):
-        return allArgs
-#        const { config } = allArgs;
-#        const parsedArgs = parseArgs(allArgs);
-#
-#        const error = validateArgs({ config, args: parsedArgs });
-#
-#        if (error) {
-#            return Promise.reject(error);
-#        }
-#
-#        return this.send(parsedArgs);
+        config = allArgs['config']
+        parsedArgs = parseArgs(allArgs)
+        error = validateArgs({ 'config': config, 'args': parsedArgs })
+        if (error) :
+            #return Promise.reject(error)
+            pass
+        return self.send(parsedArgs)
+
+    def send(self, args):
+        pass
+        return args
+
+def parseArgs(args) :
+    return args
+
+def validateArgs(args) :
+    return ''
+
+
 
 # ==========================
 # ----- Helper Methods -----
