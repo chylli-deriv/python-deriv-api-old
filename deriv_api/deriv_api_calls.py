@@ -44,4 +44,4 @@ class DerivAPICalls:
         return self.processRequest(allArgs)
 
     def processRequest(self, allArgs):
-        pass
+        return allArgs
