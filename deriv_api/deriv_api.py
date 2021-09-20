@@ -1,9 +1,12 @@
-#
-import websocket
+#from deriv_api.deriv_api_calls import DerivAPICalls
+import asyncio
+from os import error
+from websockets import connect
 import json
-#from websocket._exceptions import WebSocketConnectionClosedException
+#class DerivAPI(DerivAPICalls):
 
-class deriv_api:
+class DerivAPI:
+    """Main class of the python DerivAPI module. It provides methods to connect, read and interact with API"""
     wsconnection = ''
 
     def __init__(self, app_id, endpoint = 'frontend.binaryws.com', lang = 'EN', brand = ''):
@@ -14,38 +17,36 @@ class deriv_api:
             'brand': brand
         }
 
-        self.wsconnection = self.__connect(connectionArgument)
-        
+        self.__set_apiURL(connectionArgument)
+        self.apiconnect()
+
+    def __set_apiURL(self, connectionArgument):
+        self.api_url = "wss://ws.binaryws.com/websockets/v3?app_id="+connectionArgument['app_id']+"&l="+connectionArgument['lang']+"&brand="+connectionArgument['brand']
+
+    def __get_apiURL(self):
+        return self.api_url
+
+    def apiconnect(self):
         if (self.wsconnection):
-            self.wsconnection.run_forever(ping_interval=60, ping_timeout=10, ping_payload={'ping':1})
+            return self.wsconnection
+        else:
+            self.wsconnection = connect(self.__get_apiURL)
+            return 
 
-    def __connect(self, connectionArgument):
-        apiUrl = "wss://ws.binaryws.com/websockets/v3?app_id="+connectionArgument['app_id']+"&l="+connectionArgument['lang']+"&brand="+connectionArgument['brand']
-        wsconnection = websocket.WebSocketApp(apiUrl, on_message=self.on_message, on_error=self.on_error, on_ping=self.on_ping, on_pong=self.on_pong)
-        return wsconnection
+    async def send_receive(self, message):
+        async with self.apiconnect() as websocket:
+            await (websocket.send(json.dumps(message)))
+            async for message in websocket:
+                return self.parse(message)
 
-    # error may be webSocketTimeoutException, WebSocketConnectionClosedException... 
-    def on_error(self, wsconnection, error):
-        return 'Something went wrong while connecting API.'
-
-    def on_message(self, wsconnection, message):
+    def parse(self, message):
         data = json.loads(message)
-        
         if 'error' in data.keys():
-            return "Error"
+            return 'error'
+        return data    
 
-        return data
-
-    def on_ping(self, wsconnection, message):
-        return message
-
-    def on_pong(self, wsconnection, message):
-        data = json.loads(message)
-
-        return data['ping']
-
-    #def set_endpoint(self, endpoint): todo later improvement
-    #    self.endpoint = endpoint
-
-    #def get_endpoint(self):
-    #    return self.endpoint
+    def add_api_call(self, request):
+        loop.create_task(self.send_receive(request))
+        
+loop = asyncio.get_event_loop()
+loop.run_forever()
