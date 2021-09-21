@@ -1,8 +1,15 @@
 #from deriv_api.deriv_api_calls import DerivAPICalls
 import asyncio
-from os import error
-from websockets import connect
+import websockets
 import json
+import logging
+
+# TODO: remove after development
+logging.basicConfig(
+    format="%(asctime)s %(message)s",
+    level=logging.DEBUG
+)
+
 #class DerivAPI(DerivAPICalls):
 
 class DerivAPI:
@@ -30,8 +37,12 @@ class DerivAPI:
         if (self.wsconnection):
             return self.wsconnection
         else:
-            self.wsconnection = connect(self.__get_apiURL)
+            self.wsconnection = websockets.connect(self.__get_apiURL)
             return 
+
+    # this is called from client by api.buy, api.account... then in APICalls -> processRequest -> validateArgs + call this send
+    async def send(self, message):
+        loop.create_task(self.send_receive(message))
 
     async def send_receive(self, message):
         async with self.apiconnect() as websocket:
@@ -43,10 +54,12 @@ class DerivAPI:
         data = json.loads(message)
         if 'error' in data.keys():
             return 'error'
-        return data    
+        return data
 
-    def add_api_call(self, request):
-        loop.create_task(self.send_receive(request))
-        
+    #def add_api_call(self, request):
+    #    loop.create_task(self.send_receive(request))
+
 loop = asyncio.get_event_loop()
+# connect & ping parallely
+#loop.create_task(apiconnect())
 loop.run_forever()
