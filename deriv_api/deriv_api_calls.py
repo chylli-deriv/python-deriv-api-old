@@ -21,7 +21,7 @@ class DerivAPICalls:
 
         config = {
             'account_closure' : {
-               'required' : 1,
+'required' : 1,
                'type' : 'numeric'
             },
             'passthrough' : {},
@@ -5532,8 +5532,13 @@ class DerivAPICalls:
         pass
         return args
 
-def parseArgs(args) :
-    return args
+def parseArgs(allArgs) :
+    parsedArgs = allArgs['args']
+    
+    if allArgs['needsMethodArg'] and not(isinstance(parsedArgs, dict)):
+        parsedArgs = { allArgs['method']: parsedArgs }
+
+    return parsedArgs
 
 def validateArgs(args) :
     return ''
