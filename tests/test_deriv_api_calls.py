@@ -1,6 +1,9 @@
+import asyncio
+import pytest
 from deriv_api import deriv_api_calls
 
-def test_deriv_api_calls():
+@pytest.mark.asyncio
+async def test_deriv_api_calls():
     api = deriv_api_calls.DerivAPICalls()
     assert(isinstance(api, deriv_api_calls.DerivAPICalls))
-    assert api.accountClosure("hello")['needsMethodArg'] == '1'
+    assert (await api.accountClosure("hello"))['needsMethodArg'] == '1'
