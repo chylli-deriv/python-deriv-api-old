@@ -47,9 +47,7 @@ class DerivAPI:
             await (websocket.send(json.dumps(message)))
             async for message in websocket:
                 return self.parse_response(message)
-
+   
     def parse_response(self, message):
         data = json.loads(message)
-        if 'error' in data.keys():
-            return 'error'
         return data
