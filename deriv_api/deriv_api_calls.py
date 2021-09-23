@@ -5534,9 +5534,29 @@ class DerivAPICalls:
 
 def parseArgs(allArgs) :
     parsedArgs = allArgs['args']
+    method = allArgs['method']
     
     if allArgs['needsMethodArg'] and not(isinstance(parsedArgs, dict)):
-        parsedArgs = { allArgs['method']: parsedArgs }
+        parsedArgs = { method: parsedArgs }
+
+    parsedArgs[method] = parsedArgs.get(method, 1)
+    
+    config = allArgs['config']
+    for param in parsedArgs:
+        value = parsedArgs[param]
+        if not (param in config):
+            print(f'{param} is not in config')
+            return
+
+        if config[param]['type'] == 'string':
+            parsedArgs[param] = f'{value}'
+        elif config[param]['type'] == 'numeric' or config[param]['type'] == 'boolean':
+            parsedArgs[param] = int(value)
+            
+            
+    print(parsedArgs);
+    return parsedArgs
+
 
     return parsedArgs
 
@@ -5576,9 +5596,9 @@ def validateArgs(args) :
 #        if (config[param].type === 'string') {
 #            parsedArgs[param] = `${value}`;
 #        } else if (config[param].type === 'numeric') {
-#            parsedArgs[param] = parseInt(value, 10);
+#            parsedArgs[param] = int(value);
 #        } else if (config[param].type === 'boolean') {
-#            parsedArgs[param] = +value;
+#            parsedArgs[param] = int(value);
 #        }
 #    });
 #
