@@ -1,6 +1,9 @@
-import asyncio
 import pytest
 from deriv_api import deriv_api_calls
+import pytest
+
+from deriv_api import deriv_api_calls
+
 
 @pytest.mark.asyncio
 async def test_deriv_api_calls(mocker):
