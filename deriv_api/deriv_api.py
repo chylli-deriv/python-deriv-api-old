@@ -9,7 +9,6 @@ logging.basicConfig(
     format="%(asctime)s %(message)s",
     level=logging.DEBUG
 )
-
 #class DerivAPI(DerivAPICalls):
 
 class DerivAPI:
