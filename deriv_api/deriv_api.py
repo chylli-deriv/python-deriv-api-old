@@ -1,51 +1,53 @@
-#
-import websocket
+#from deriv_api.deriv_api_calls import DerivAPICalls
+import asyncio
+import websockets
 import json
-#from websocket._exceptions import WebSocketConnectionClosedException
+import logging
 
-class deriv_api:
-    wsconnection = ''
+# TODO: remove after development
+logging.basicConfig(
+    format="%(asctime)s %(message)s",
+    level=logging.DEBUG
+)
+#class DerivAPI(DerivAPICalls):
+
+class DerivAPI:
+    """Main class of the python DerivAPI module. It provides methods to connect, read and interact with API"""
+    wsconnection:str = ''
 
     def __init__(self, app_id, endpoint = 'frontend.binaryws.com', lang = 'EN', brand = ''):
-        connectionArgument = {
+        connection_argument = {
             'app_id': str(app_id),
             'endpoint': endpoint,
             'lang': lang,
             'brand': brand
         }
 
-        self.wsconnection = self.__connect(connectionArgument)
+        self.__set_apiURL(connection_argument)
+        self.apiconnect()
+
+    def __set_apiURL(self, connection_argument):
+        self.api_url = "wss://ws.binaryws.com/websockets/v3?app_id="+connection_argument['app_id']+"&l="+connection_argument['lang']+"&brand="+connection_argument['brand']
+
+    def __get_apiURL(self):
+        return self.api_url
+
+    def apiconnect(self):
+        if not self.wsconnection:
+            self.wsconnection = websockets.connect(self.__get_apiURL)
         
-        if (self.wsconnection):
-            self.wsconnection.run_forever(ping_interval=60, ping_timeout=10, ping_payload={'ping':1})
+        return self.wsconnection
 
-    def __connect(self, connectionArgument):
-        apiUrl = "wss://ws.binaryws.com/websockets/v3?app_id="+connectionArgument['app_id']+"&l="+connectionArgument['lang']+"&brand="+connectionArgument['brand']
-        wsconnection = websocket.WebSocketApp(apiUrl, on_message=self.on_message, on_error=self.on_error, on_ping=self.on_ping, on_pong=self.on_pong)
-        return wsconnection
+    # this is called from client by api.buy, api.account... then in APICalls -> processRequest -> validateArgs + call this send
+    async def send(self, message):
+        self.send_receive(message)
 
-    # error may be webSocketTimeoutException, WebSocketConnectionClosedException... 
-    def on_error(self, wsconnection, error):
-        return 'Something went wrong while connecting API.'
-
-    def on_message(self, wsconnection, message):
+    async def send_receive(self, message):
+        async with self.apiconnect() as websocket:
+            await (websocket.send(json.dumps(message)))
+            async for message in websocket:
+                return self.parse_response(message)
+   
+    def parse_response(self, message):
         data = json.loads(message)
-        
-        if 'error' in data.keys():
-            return "Error"
-
         return data
-
-    def on_ping(self, wsconnection, message):
-        return message
-
-    def on_pong(self, wsconnection, message):
-        data = json.loads(message)
-
-        return data['ping']
-
-    #def set_endpoint(self, endpoint): todo later improvement
-    #    self.endpoint = endpoint
-
-    #def get_endpoint(self):
-    #    return self.endpoint

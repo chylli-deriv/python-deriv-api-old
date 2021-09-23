@@ -1,25 +1,16 @@
-#
+import pytest_mock
 from deriv_api import deriv_api
-import json
 
-deriv_api_obj = deriv_api.deriv_api(1089)
-
-#def test_connection():
-#    json_data = json.dumps({'ping': 1})
-#    deriv_api_obj.wsconnection.send(json_data)
-#    deriv_api_obj.wsconnection.recv() == 'test'
-
-def test_on_ping():
-    expected = "test ping"
-    assert deriv_api_obj.on_ping(deriv_api_obj.wsconnection, "test ping") == expected
-
-def test_on_pong():
-    expected = "pong"
+def test_deriv_api(mocker):
+    mocker.patch('deriv_api.deriv_api.DerivAPI.apiconnect', return_value='')
+    deriv_api_obj = deriv_api.DerivAPI(1234)
+    assert(isinstance(deriv_api_obj, deriv_api.DerivAPI))
+    
     message = '{"echo_req": {"ping": 1}, "msg_type": "ping", "ping": "pong"}'
-    assert deriv_api_obj.on_pong(deriv_api_obj.wsconnection, message) == expected
+    data = deriv_api_obj.parse_response(message)
+    assert data['ping'] == 'pong'
+    assert data['msg_type'] == 'ping'
 
-def test_on_message():
-    message = '{"echo_req": {"ping": 1}, "msg_type": "ping", "ping": "pong"}'
-    data = deriv_api_obj.on_message(deriv_api_obj.wsconnection, message)
-    assert data['msg_type'] == "ping"
-    assert data['ping'] == "pong"
+    message='{"echo_req": {"active_symbols": "brief","product_type1": "basic"}, "error": {"code": "InputValidationFailed","details": {},"message": "Input validation failed: Properties not allowed: product_type1."},"msg_type": "active_symbols"}'
+    data = deriv_api_obj.parse_response(message)
+    assert data['error']['code'] == 'InputValidationFailed'
