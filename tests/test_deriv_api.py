@@ -1,15 +1,12 @@
-import asyncio
-from deriv_api import deriv_api
-import json
+from deriv_api.deriv_api_calls import DerivAPICalls
 import pytest
+import pytest_mock
+from deriv_api import deriv_api
 
+#deriv_api_obj = deriv_api.DerivAPI(1089)
 
-deriv_api_obj = deriv_api.DerivAPI(1089)
-
-def test_connection():
+def test_deriv_api(mocker):
+    
+    mocker.patch('deriv_api.apiconnect', return_value='')
+    deriv_api_obj = deriv_api.DerivAPI(1234)
     assert(isinstance(deriv_api_obj, deriv_api.DerivAPI))
-
-@pytest.mark.asyncio
-async def test_send_receive():
-    response = await deriv_api_obj.send({'ping': 1})
-    assert response['ping'] == 'pong'
