@@ -5545,7 +5545,6 @@ def parseArgs(allArgs) :
     for param in parsedArgs:
         value = parsedArgs[param]
         if not (param in config):
-            print(f'{param} is not in config')
             return
 
         if config[param]['type'] == 'string':
@@ -5553,11 +5552,6 @@ def parseArgs(allArgs) :
         elif config[param]['type'] == 'numeric' or config[param]['type'] == 'boolean':
             parsedArgs[param] = int(value)
             
-            
-    print(parsedArgs);
-    return parsedArgs
-
-
     return parsedArgs
 
 def validateArgs(args) :

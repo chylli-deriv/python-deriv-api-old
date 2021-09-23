@@ -14,4 +14,8 @@ async def test_deriv_api_calls(mocker):
 def test_parse_validateArgs():
     assert deriv_api_calls.parseArgs({'config': {'acc': {'type': 'boolean'}}, 'args': '1', 'method': 'acc', 'needsMethodArg': 1}) == {'acc': 1}, "method will be a key and arg will be value if arg is not a dict and needsMethodArg is true"
     assert deriv_api_calls.parseArgs({'config': {'acc': {'type': 'boolean'}}, 'args': {'acc': '0'}, 'method': 'acc', 'needsMethodArg': 1}) == {'acc': 0}, "method value will from args if arg is a dict and needsMethodArg is true"
-    assert True
+    assert deriv_api_calls.parseArgs({'config': {'acc': {'type': 'string'}}, 'args': {'hello': 0}, 'method': 'acc', 'needsMethodArg': 1}) == None, "if arg is not in config, then return none"
+    # test type
+    assert deriv_api_calls.parseArgs({'config': {'acc': {'type': 'string'}}, 'args': {'acc': 0}, 'method': 'acc', 'needsMethodArg': 1}) == {'acc': '0'}, "arg is string"
+    assert deriv_api_calls.parseArgs({'config': {'acc': {'type': 'numeric'}}, 'args': {'acc': '0'}, 'method': 'acc', 'needsMethodArg': 1}) == {'acc': 0}, "arg is numeric"
+    assert deriv_api_calls.parseArgs({'config': {'acc': {'type': 'boolean'}}, 'args': {'acc': '0'}, 'method': 'acc', 'needsMethodArg': 1}) == {'acc': 0}, "arg is boolean"
