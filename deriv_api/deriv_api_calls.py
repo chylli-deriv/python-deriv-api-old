@@ -6029,13 +6029,6 @@ class DerivAPICalls:
             raise ValueError(error)
         return await self.send(parsed_args)
 
-    async def send(self, args):
-        """
-        send request to server
-        """
-        pass
-        return args
-
 
 def parse_args(all_args):
     """

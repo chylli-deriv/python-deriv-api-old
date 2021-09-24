@@ -1,12 +1,16 @@
 import pytest
 import re
+import asyncio
 import deriv_api.deriv_api_calls
 from deriv_api.deriv_api_calls import *
 
+class DerivedDerivAPICalls(DerivAPICalls):
+    async def send(self, args):
+        return args
 
 @pytest.mark.asyncio
 async def test_deriv_api_calls(mocker):
-    api = DerivAPICalls()
+    api = DerivedDerivAPICalls()
     assert isinstance(api, DerivAPICalls)
     assert (await api.account_closure({'account_closure': 1, 'reason': 'want'})) == {'account_closure': 1,
                                                                                     'reason': 'want'}, 'account_closure can get right result'
