@@ -7,6 +7,7 @@ from numbers import Number
 # ----- API Methods -----
 # =======================
 
+
 class DerivAPICalls:
     # To be implemented by the sub-class
     # __init__() { }
@@ -6062,12 +6063,14 @@ def parse_args(all_args):
             
     return parsed_args
 
+
 type_chekcers = {
     'dict': lambda value: isinstance(value, dict),
     'numeric': lambda value: isinstance(value, Number),
     'string': lambda value: isinstance(value, str),
     'boolean': lambda value: value in [True, False, 0, 1]
 }
+
 
 def validate_args(config, args):
     """
@@ -6084,7 +6087,7 @@ def validate_args(config, args):
 
     for param in args.keys():
         value = args[param]
-        if not param in config:
+        if param not in config:
             continue
         expected_type = config[param].get('type')
 
@@ -6096,55 +6099,3 @@ def validate_args(config, args):
             error_messages.append(f'{expected_type} value expected but found {type(value)}: {param}')
 
     return ' - '.join(error_messages) if len(error_messages) else ''
-
-
-
-
-# ==========================
-# ----- Helper Methods -----
-# ==========================
-
-#const isObject = value => value instanceof Object;
-#
-#const typeCheckers = {
-#    object : isObject,
-#    numeric: value => !Number.isNaN(value * 1),
-#    string : value => typeof value === 'string',
-#    boolean: value => [true, false, 0, 1].includes(value),
-#};
-#
-
-#function validateArgs ({ config, args }) {
-#    if (!isObject(args)) {
-#        return `Requires an object but a ${typeof args} is passed.`;
-#    }
-#
-#    const errorMessages = [];
-#
-#    const missing = Object.keys(config).filter(
-#        key => (config[key] || {}).required && !(key in args),
-#    );
-#
-#    if (missing.length) {
-#        errorMessages.push(`Required parameters missing: ${missing.join(', ')}`);
-#    }
-#
-#    Object.keys(args).forEach((param) => {
-#        const value = args[param];
-#
-#        if (!(param in config)) return;
-#
-#        const expectedType = config[param].type;
-#
-#        if (!expectedType) return;
-#
-#        if (!typeCheckers[expectedType](value)) {
-#            errorMessages.push(
-#                `${expectedType} value expected but found ${typeof value}: ${param}`,
-#            );
-#        }
-#    });
-#
-#    return errorMessages.length ? errorMessages.join(' - ') : '';
-#}
-#
