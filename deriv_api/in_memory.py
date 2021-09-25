@@ -6,7 +6,7 @@ class InMemory:
         self.store = {}
         self.type_store = {}
 
-    def has_key(self, key):
+    def has(self, key):
         return key in self.store
 
     # we should serialize key (utils/dict_to_cache_key) before we store it
@@ -14,12 +14,12 @@ class InMemory:
     # But from js version of deriv-api logic, user can choose cache object freely.
     # So we shouldn't suppose other cache module will serialize the key.
     # So we should always call serialize in the caller module
-    def get_key(self, key):
+    def get(self, key):
         return self.store[key]
 
     def get_by_msg_type(self, msg_type):
         return self.type_store[msg_type]
 
-    def set_key_value(self, key, value):
+    def set(self, key, value):
         self.store[key] = value
         self.type_store[value['msg_type']] = value
