@@ -1,5 +1,6 @@
 from deriv_api.in_memory import InMemory
 
+
 def test_in_memory():
     obj = InMemory()
     assert isinstance(obj, InMemory)

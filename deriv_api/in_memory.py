@@ -17,8 +17,8 @@ class InMemory:
     def get_key(self, key):
         return self.store[key]
 
-    def get_by_msg_type(self, type):
-        return self.type_store[type]
+    def get_by_msg_type(self, msg_type):
+        return self.type_store[msg_type]
 
     def set_key_value(self, key, value):
         self.store[key] = value
