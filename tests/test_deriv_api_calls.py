@@ -1,7 +1,5 @@
 import pytest
 import re
-import asyncio
-import deriv_api.deriv_api_calls
 from deriv_api.deriv_api_calls import *
 
 class DerivedDerivAPICalls(DerivAPICalls):
