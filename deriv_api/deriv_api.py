@@ -30,7 +30,6 @@ class DerivAPI(DerivAPICalls):
 
     async def api_connect(self):
         if not self.wsconnection:
-            print("connectinggggggggg");
             self.wsconnection = await websockets.connect(self.api_url)
             print(type(self.wsconnection))
         return self.wsconnection

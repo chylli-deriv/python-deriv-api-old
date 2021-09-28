@@ -23,7 +23,10 @@ async def sample_calls():
     authorize = await api.authorize(api_token)
     print(authorize)
 
-    balance = await api.balance()
-    print(balance)
+    '''Get Balance'''
+    response = await api.balance()
+    response = response['balance']
+    currency = response['currency']
+    print("Your current balance is", response['currency'], response['balance'])
 
 asyncio.run(sample_calls())
