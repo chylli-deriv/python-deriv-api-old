@@ -3,7 +3,7 @@ from deriv_api import deriv_api
 
 def test_deriv_api(mocker):
     mocker.patch('deriv_api.deriv_api.DerivAPI.api_connect', return_value='')
-    deriv_api_obj = deriv_api.DerivAPI(1234)
+    deriv_api_obj = deriv_api.DerivAPI({'app_id': 1234})
     assert(isinstance(deriv_api_obj, deriv_api.DerivAPI))
     
     message = '{"echo_req": {"ping": 1}, "msg_type": "ping", "ping": "pong"}'

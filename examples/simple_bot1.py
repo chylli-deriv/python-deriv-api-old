@@ -11,7 +11,7 @@ if len(api_token) == 0:
     sys.exit("DERIV_TOKEN environment variable is not set")
 
 async def sample_calls():
-    api = deriv_api.DerivAPI(app_id)
+    api = deriv_api.DerivAPI({'app_id': app_id})
     response = await api.ping({'ping':1})
     if response['ping']:
         print(response['ping'])
