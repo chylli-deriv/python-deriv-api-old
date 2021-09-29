@@ -1,5 +1,4 @@
-#from deriv_api.deriv_api_calls import DerivAPICalls
-import asyncio
+from deriv_api.deriv_api_calls import DerivAPICalls
 import websockets
 import json
 import logging
@@ -9,9 +8,7 @@ logging.basicConfig(
     format="%(asctime)s %(message)s",
     level=logging.DEBUG
 )
-#class DerivAPI(DerivAPICalls):
-
-class DerivAPI:
+class DerivAPI(DerivAPICalls):
     """Main class of the python DerivAPI module. It provides methods to connect, read and interact with API"""
     wsconnection:str = ''
 
@@ -24,7 +21,6 @@ class DerivAPI:
         }
 
         self.__set_apiURL(connection_argument)
-        self.apiconnect()
 
     def __set_apiURL(self, connection_argument):
         self.api_url = "wss://ws.binaryws.com/websockets/v3?app_id="+connection_argument['app_id']+"&l="+connection_argument['lang']+"&brand="+connection_argument['brand']
@@ -32,21 +28,20 @@ class DerivAPI:
     def __get_apiURL(self):
         return self.api_url
 
-    def apiconnect(self):
+    async def api_connect(self):
         if not self.wsconnection:
-            self.wsconnection = websockets.connect(self.__get_apiURL)
-        
+            self.wsconnection = await websockets.connect(self.api_url)
+            print(type(self.wsconnection))
         return self.wsconnection
 
-    # this is called from client by api.buy, api.account... then in APICalls -> processRequest -> validateArgs + call this send
     async def send(self, message):
-        self.send_receive(message)
+        return await self.send_receive(message)
 
     async def send_receive(self, message):
-        async with self.apiconnect() as websocket:
-            await (websocket.send(json.dumps(message)))
-            async for message in websocket:
-                return self.parse_response(message)
+        websocket = await self.api_connect()
+        await websocket.send(json.dumps(message))
+        async for message in websocket:
+            return self.parse_response(message)
    
     def parse_response(self, message):
         data = json.loads(message)
