@@ -82,9 +82,7 @@ class DerivAPI(DerivAPICalls):
         return url
 
     async def api_connect(self):
-        print("api_connect")
         if not self.wsconnection:
-            print("inside api_connect")
             self.wsconnection = await websockets.connect(self.api_url)
         return self.wsconnection
 
@@ -122,6 +120,5 @@ class DerivAPI(DerivAPICalls):
         return data
 
     async def disconnect(self):
-        print("disconnecting")
         self.shouldReconnect = False
         await self.wsconnection.close()
