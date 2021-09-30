@@ -29,8 +29,10 @@ async def sample_calls():
     currency = response['currency']
     print("Your current balance is", response['currency'], response['balance'])
 
-
+    '''Get active symbols from cache'''
     cached_active_symbols = await api.cache.active_symbols({"active_symbols": "brief", "product_type": "basic"})
     print(cached_active_symbols)
+
+
 
 asyncio.run(sample_calls())

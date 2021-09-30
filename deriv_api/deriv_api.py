@@ -5,6 +5,8 @@ import websockets
 import json
 import logging
 from deriv_api.errors import APIError, ConstructionError
+from deriv_api.utils import dict_to_cache_key, is_valid_url
+import re
 
 # TODO: remove after development
 logging.basicConfig(
@@ -27,12 +29,15 @@ class DerivAPI(DerivAPICalls):
     param {String}     options.lang       - Language of the API communication
     param {String}     options.brand      - Brand name
     param {Object}     options.middleware - A middleware to call on certain API actions
+
+    property {Cache} cache - Temporary cache default to {InMemory}
+    property {Cache} storage - If specified, uses a more persistent cache (local storage, etc.)
     """
     wsconnection:str = ''
     storage = ''
     def __init__(self, options):
         if not options.get('app_id'):
-            raise APIError('An app_id is required to connect to the API')
+            raise ConstructionError('An app_id is required to connect to the API')
 
         endpoint = options.get('endpoint', 'frontend.binaryws.com')
         lang = options.get('lang', 'EN')
@@ -42,7 +47,7 @@ class DerivAPI(DerivAPICalls):
 
         connection_argument = {
             'app_id': str(options.get('app_id')),
-            'endpoint': endpoint,
+            'endpoint_url': self.get_url(endpoint),
             'lang': lang,
             'brand': brand
         }
@@ -53,13 +58,28 @@ class DerivAPI(DerivAPICalls):
         if storage:
             self.storage = Cache(self, storage)
 
+        # If we have the storage look that one up
         self.cache = Cache(self.storage if self.storage else self, cache)
 
     def __set_apiURL(self, connection_argument):
-        self.api_url = "wss://ws.binaryws.com/websockets/v3?app_id="+connection_argument['app_id']+"&l="+connection_argument['lang']+"&brand="+connection_argument['brand']
+        self.api_url = connection_argument.get('endpoint_url')+"/websockets/v3?app_id="+connection_argument.get('app_id')+"&l="+connection_argument.get('lang')+"&brand="+connection_argument.get('brand')
 
     def __get_apiURL(self):
         return self.api_url
+
+    def get_url(self, original_endpoint):
+        if not isinstance(original_endpoint, str):
+            raise ConstructionError(f"Endpoint must be a string, passed: {type(original_endpoint)}")
+
+        match = re.match(r'((?:\w*:\/\/)*)(.*)', original_endpoint).groups()
+        protocol = match[0] if match[0] == "ws://" else "wss://"
+        endpoint = match[1]
+
+        url = protocol+endpoint
+        if not is_valid_url(url):
+            raise ConstructionError(f'Invalid URL:{original_endpoint}')
+
+        return url
 
     async def api_connect(self):
         print("api_connect")
@@ -89,13 +109,6 @@ class DerivAPI(DerivAPICalls):
         return response
 
     async def send_receive(self, message):
-        if await self.cache.get_by_msg_type(message):
-            value = await self.cache.get_by_msg_type(message)
-            if not value and self.storage and self.storage.get_by_msg_type(message):
-                return self.storage.get_by_msg_type(message)
-            else:
-                return value
-
         websocket = await self.api_connect()
         await websocket.send(json.dumps(message))
         async for response in websocket:
