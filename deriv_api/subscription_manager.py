@@ -3,6 +3,8 @@ import asyncio
 from deriv_api.utils import dict_to_cache_key
 from deriv_api.errors import APIError
 from rx import operators as op
+from rx.subject import Subject
+from typing import Optional
 
 # streams_list is the list of subscriptions msg_types available.
 # Please add / remove based on current available streams in api.
@@ -14,15 +16,16 @@ streams_list = ['balance', 'candles', 'p2p_advertiser', 'p2p_order', 'proposal',
 
 
 class SubscriptionManager:
-    def __init__(self, api):
+    def __init__(self, loop: asyncio.BaseEventLoop, api):
+        self.loop = loop
         self.api = api
-        self.sources = {}
-        self.subs_id_to_key = {}
-        self.key_to_subs_id = {}
-        self.buy_key_to_contract_id = {}
-        self.subs_per_msg_type = {}
+        self.sources: dict = {}
+        self.subs_id_to_key: dict = {}
+        self.key_to_subs_id: dict = {}
+        self.buy_key_to_contract_id: dict = {}
+        self.subs_per_msg_type: dict = {}
 
-    def subscribe(self, request):
+    def subscribe(self, request: dict) -> Subject:
         """
         Subscribe to a given request, returns a stream of new responses,
         Errors should be handled by the user of the stream
@@ -38,10 +41,12 @@ class SubscriptionManager:
         if self.source_exists(request):
             return self.get_source(request)
 
-        return self.create_new_source(request)
+        new_request: dict = request.copy()
+        new_request['subscribe'] = 1
+        return self.create_new_source(new_request)
 
-    def get_source(self, request):
-        key = dict_to_cache_key(request)
+    def get_source(self, request: dict) -> Optional[Subject]:
+        key: str = dict_to_cache_key(request)
         if key in self.sources:
             return self.sources[key]
 
@@ -52,11 +57,11 @@ class SubscriptionManager:
 
         return None
 
-    def source_exists(self, request):
+    def source_exists(self, request: dict):
         return self.get_source(request)
 
-    def create_new_source(self, request):
-        key = dict_to_cache_key(request)
+    def create_new_source(self, request: dict) -> Subject:
+        key: str = dict_to_cache_key(request)
 
         async def forget_old_source():
             if key not in self.key_to_subs_id:
@@ -67,11 +72,12 @@ class SubscriptionManager:
             except Exception:
                 pass
 
-        source = self.api.send_and_get_source(request).pipe(
+        source: Subject = self.api.send_and_get_source(request).pipe(
             op.finally_action(forget_old_source),
             op.share()
         )
-
+        print("helllllllllllllllllllllllllllll")
+        print(f"is instance  in api: {isinstance(source, Subject)}")
         self.sources[key] = source
         self.save_subs_per_msg_type(request, key)
 
@@ -90,7 +96,7 @@ class SubscriptionManager:
                 }
             self.save_subs_id(key, response['subscription'])
 
-        asyncio.create_task(process_response())
+        self.loop.create_task(process_response())
         return source
 
     def forget(self, sub_id):
@@ -158,5 +164,5 @@ class SubscriptionManager:
         source.complete()
 
 
-def get_msg_type(request):
+def get_msg_type(request) -> str:
     return next((x for x in streams_list if x in request), None)
