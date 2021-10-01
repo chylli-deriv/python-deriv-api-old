@@ -72,21 +72,24 @@ class SubscriptionManager:
             except Exception:
                 pass
 
+        # TODO test this
         source: Subject = self.api.send_and_get_source(request).pipe(
             op.finally_action(forget_old_source),
             op.share()
         )
-        print("helllllllllllllllllllllllllllll")
-        print(f"is instance  in api: {isinstance(source, Subject)}")
         self.sources[key] = source
         self.save_subs_per_msg_type(request, key)
-
+        print("before process_response")
         async def process_response():
             response = None
+            print("in process_response")
             # noinspection PyBroadException
             try:
-                response = await source.pipe(op.first(), op.to_future())
-            except Exception:
+                print("in try before await")
+                response = await source.pipe(op.first(), op.to_future(self.loop.create_future))
+                print("in try")
+            except Exception as err:
+                print(f"get exception {err}")
                 self.remove_key_on_error(key)
 
             if request['buy']:
@@ -96,7 +99,8 @@ class SubscriptionManager:
                 }
             self.save_subs_id(key, response['subscription'])
 
-        self.loop.create_task(process_response())
+        task = self.loop.create_task(process_response())
+        self.loop.run_until_complete(task)
         return source
 
     def forget(self, sub_id):
@@ -114,6 +118,8 @@ class SubscriptionManager:
         return self.api.send({'forget_all': types})
 
     def complete_subs_by_ids(self, *sub_ids):
+        print("..........................................")
+        print(self.subs_id_to_key)
         for sub_id in sub_ids:
             key = self.subs_id_to_key[sub_id]
             del self.subs_id_to_key[sub_id]
