@@ -23,7 +23,7 @@ class DerivAPI(DerivAPICalls):
     apiFromEndpoint = deriv_api.DerivAPI({ endpoint: 'ws.binaryws.com', app_id: 1234 });
 
     param {Object}     options
-    param {WebSocket=} options.connection - A ready to use connection
+    param {WebSocket}  options.connection - A ready to use connection
     param {String}     options.endpoint   - API server to connect to
     param {Number}     options.app_id     - Application ID of the API user
     param {String}     options.lang       - Language of the API communication
@@ -36,24 +36,26 @@ class DerivAPI(DerivAPICalls):
     wsconnection:str = ''
     storage = ''
     def __init__(self, options):
-        if not options.get('app_id'):
-            raise ConstructionError('An app_id is required to connect to the API')
-
         endpoint = options.get('endpoint', 'frontend.binaryws.com')
         lang = options.get('lang', 'EN')
         brand = options.get('brand', '')
         cache = options.get('cache', InMemory())
         storage = options.get('storage')
 
-        connection_argument = {
-            'app_id': str(options.get('app_id')),
-            'endpoint_url': self.get_url(endpoint),
-            'lang': lang,
-            'brand': brand
-        }
+        if options.get('connection'):
+            self.wsconnection = options.get('connection')
+        else:
+            if not options.get('app_id'):
+                raise ConstructionError('An app_id is required to connect to the API')
 
-        self.shouldReconnect = True
-        self.__set_apiURL(connection_argument)
+            connection_argument = {
+                'app_id': str(options.get('app_id')),
+                'endpoint_url': self.get_url(endpoint),
+                'lang': lang,
+                'brand': brand
+            }
+            self.__set_apiURL(connection_argument)
+            self.shouldReconnect = True
 
         if storage:
             self.storage = Cache(self, storage)
@@ -82,24 +84,21 @@ class DerivAPI(DerivAPICalls):
         return url
 
     async def api_connect(self):
-        if not self.wsconnection:
+        if not self.wsconnection and self.shouldReconnect:
             self.wsconnection = await websockets.connect(self.api_url)
+
         return self.wsconnection
 
     async def send(self, message):
         try:
             response = await self.send_receive(message)
-        except websockets.ConnectionClosed:
+        except (websockets.ConnectionClosed, websockets.ConnectionClosedError):
             if not self.shouldReconnect:
                return APIError("API Connection Closed")
             else:
                 self.wsconnection = ''
                 await self.api_connect()
                 response = await self.send_receive(message)
-        except websockets.ConnectionClosedError:
-            self.wsconnection = ''
-            await self.api_connect()
-            response = await self.send_receive(message)
 
         await self.cache.set(message, response)
         if self.storage:

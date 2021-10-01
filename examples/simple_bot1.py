@@ -19,11 +19,11 @@ async def sample_calls():
     active_symbols = await api.active_symbols({"active_symbols": "brief", "product_type": "basic"})
     print(active_symbols)
 
-    '''Authorize'''
+    ''' Authorize '''
     authorize = await api.authorize(api_token)
     print(authorize)
 
-    '''Get Balance'''
+    ''' Get Balance '''
     response = await api.balance()
     response = response['balance']
     currency = response['currency']
@@ -33,6 +33,44 @@ async def sample_calls():
     cached_active_symbols = await api.cache.active_symbols({"active_symbols": "brief", "product_type": "basic"})
     print(cached_active_symbols)
 
+    ''' get assets '''
+    assets = await api.cache.asset_index({"asset_index": 1})
+    print(assets)
 
+    ''' Get proposal '''
+    proposal = await api.proposal({"proposal": 1, "amount": 100, "barrier": "+0.1", "basis": "payout",
+                                   "contract_type": "CALL", "currency": "USD", "duration": 60, "duration_unit": "s",
+                                   "symbol": "R_100" ,
+                                   #"subscribe":1
+                                   })
+    print(proposal)
+
+    ''' Buy '''
+    response = await api.buy({"buy": proposal.get('proposal').get('id'), "price": 100})
+    print(response)
+    print(response.get('buy').get('buy_price'))
+    print(response.get('buy').get('contract_id'))
+    print(response.get('buy').get('longcode'))
+
+    ''' open contracts '''
+    poc = await api.proposal_open_contract({"proposal_open_contract": 1, "contract_id": response.get('buy').get('contract_id'),
+                                      #"subscribe": 1
+                                      })
+    print(poc)
+
+    if not poc.get('proposal_open_contract').get('is_sold'):
+        ''' sell '''
+        sell = await api.sell({"sell": response.get('buy').get('contract_id'), "price": 80})
+        print(sell)
+
+    ''' profit table '''
+    profit_table = await api.profit_table({{"profit_table": 1, "description": 1, "sort": "ASC"}})
+    print(profit_table)
+
+    ''' transaction statement '''
+    statement = await api.statement({"statement": 1,"description": 1,"limit": 100,"offset": 25})
+    print(statement)
+
+    api.disconnect()
 
 asyncio.run(sample_calls())
