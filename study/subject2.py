@@ -13,7 +13,7 @@ def forget_old_source():
 
 def func_test():
     source = get_source().pipe(op.share())
-    #source.subscribe(lambda d: print(f"get {d}"))
+    source.subscribe(lambda d: print(f"get {d}"))
     async def process_response():
         response = None
         try:
