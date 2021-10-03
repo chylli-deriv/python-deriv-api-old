@@ -71,6 +71,7 @@ class SubscriptionManager:
                 self.forget(self.key_to_subs_id[key])
             except Exception:
                 pass
+            return
 
         # TODO test this
         source: Subject = self.api.send_and_get_source(request).pipe(
