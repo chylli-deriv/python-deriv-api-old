@@ -1,7 +1,8 @@
 import rx
+import asyncio
 from rx.subject import Subject
 from rx import operators as op
-import asyncio
+
 subject = Subject()
 subject.subscribe(lambda i: print(f"get {i} after subject created"))
 def get_source():
@@ -11,6 +12,12 @@ def get_source():
     return source
 def forget_old_source():
     return
+number = 0
+async def emit():
+    global number
+    await asyncio.sleep(1)
+    subject.on_next(number)
+    number = number + 1
 
 async def func_test():
     source = get_source()
@@ -18,16 +25,19 @@ async def func_test():
     response = None
     try:
         print("in try before wait")
-        #response = await source.pipe(op.first(), op.to_future())
-        source.pipe(op.first()).subscribe(lambda i:print(f"get in first {i}"))#, op.to_future())
+        response = await source.pipe(op.first(), op.to_future())
+        #source.pipe(op.first()).subscribe(lambda i:print(f"get in first {i}"))#, op.to_future())
         print(f"in try after await {response}")
     except Exception as err:
         print(f"error {err}")
     return source
 
-loop = asyncio.get_event_loop()
-task = loop.create_task(func_test())
-subject.on_next(1)
-subject.on_next(2)
-loop.run_until_complete(task)
+async def main():
+    tasks = []
+    tasks.append(asyncio.create_task(func_test()))
+    tasks.append(emit())
+    tasks.append(emit())
+    await asyncio.wait(tasks)
+asyncio.run(main())
+
 #asyncio.run(task)
