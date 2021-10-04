@@ -35,7 +35,7 @@ class DerivAPI(DerivAPICalls):
     """
     wsconnection:str = ''
     storage = ''
-    def __init__(self, options):
+    def __init__(self, **options):
         endpoint = options.get('endpoint', 'frontend.binaryws.com')
         lang = options.get('lang', 'EN')
         brand = options.get('brand', '')

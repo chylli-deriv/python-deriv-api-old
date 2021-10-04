@@ -11,7 +11,7 @@ if len(api_token) == 0:
     sys.exit("DERIV_TOKEN environment variable is not set")
 
 async def sample_calls():
-    api = deriv_api.DerivAPI({'app_id': app_id})
+    api = deriv_api.DerivAPI(app_id=app_id)
     response = await api.ping({'ping':1})
     if response['ping']:
         print(response['ping'])
@@ -64,13 +64,13 @@ async def sample_calls():
         print(sell)
 
     ''' profit table '''
-    profit_table = await api.profit_table({{"profit_table": 1, "description": 1, "sort": "ASC"}})
+    profit_table = await api.profit_table({"profit_table": 1, "description": 1, "sort": "ASC"})
     print(profit_table)
 
     ''' transaction statement '''
     statement = await api.statement({"statement": 1,"description": 1,"limit": 100,"offset": 25})
     print(statement)
 
-    api.disconnect()
+    await api.disconnect()
 
 asyncio.run(sample_calls())
