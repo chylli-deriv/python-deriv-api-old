@@ -18,8 +18,8 @@ async def func_test():
     response = None
     try:
         print("in try before wait")
-        #response = await source.pipe(op.first(), op.to_future())
-        source.pipe(op.first()).subscribe(lambda i:print(f"get in first {i}"))#, op.to_future())
+        response = await source.pipe(op.first(), op.to_future())
+        #source.pipe(op.first()).subscribe(lambda i:print(f"get in first {i}"))#, op.to_future())
         print(f"in try after await {response}")
     except Exception as err:
         print(f"error {err}")
