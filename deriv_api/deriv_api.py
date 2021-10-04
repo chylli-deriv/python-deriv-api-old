@@ -8,7 +8,6 @@ from deriv_api.errors import APIError, ConstructionError
 from deriv_api.utils import dict_to_cache_key, is_valid_url
 import re
 
-# TODO: remove after development
 logging.basicConfig(
     format="%(asctime)s %(message)s",
     level=logging.ERROR
