@@ -4,6 +4,7 @@ from deriv_api.utils import dict_to_cache_key
 from deriv_api.errors import APIError
 from rx import operators as op
 from rx.subject import Subject
+from rx import Observable
 from typing import Optional
 
 # streams_list is the list of subscriptions msg_types available.
@@ -20,6 +21,7 @@ class SubscriptionManager:
         self.loop = loop
         self.api = api
         self.sources: dict = {}
+        self.orig_sources: dict = {}
         self.subs_id_to_key: dict = {}
         self.key_to_subs_id: dict = {}
         self.buy_key_to_contract_id: dict = {}
@@ -74,7 +76,8 @@ class SubscriptionManager:
             return
 
         # TODO test this
-        source: Subject = (await self.api.send_and_get_source(request)).pipe(
+        self.orig_sources[key]: Subject = await self.api.send_and_get_source(request)
+        source: Observable = self.orig_sources[key].pipe(
             op.finally_action(forget_old_source),
             op.share()
         )
@@ -156,8 +159,8 @@ class SubscriptionManager:
             return
 
         # Delete the source
-        source = self.sources[key]
         del self.sources[key]
+        orig_source: Subject = self.orig_sources.pop(key)
 
         try:
             # Delete the subs id if exist
@@ -175,7 +178,7 @@ class SubscriptionManager:
         # Mark the source complete
         # TODO is it complete ?
         # MUST resolve
-        # source.complete()
+        orig_source.on_completed()
 
 
 def get_msg_type(request) -> str:
