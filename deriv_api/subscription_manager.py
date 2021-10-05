@@ -123,20 +123,21 @@ class SubscriptionManager:
         print("..........................................")
         print(self.subs_id_to_key)
         for sub_id in sub_ids:
-            key = self.subs_id_to_key[sub_id]
-            del self.subs_id_to_key[sub_id]
-            self.complete_subs_by_key(key)
+            if sub_id in self.subs_id_to_key:
+                key = self.subs_id_to_key[sub_id]
+                self.complete_subs_by_key(key)
 
     def save_subs_id(self, key, subscription):
+        print(f"in save_subs_id {subscription}")
         if not subscription:
             return self.complete_subs_by_key(key)
 
         subs_id = subscription['id']
-
         if subs_id not in self.subs_id_to_key:
             self.subs_id_to_key[subs_id] = key
             self.key_to_subs_id[key] = subs_id
 
+        print(f"save subs id result  {self.subs_id_to_key} {subs_id}")
         return None
 
     def save_subs_per_msg_type(self, request, key):
@@ -158,18 +159,23 @@ class SubscriptionManager:
         source = self.sources[key]
         del self.sources[key]
 
-        # Delete the subs id if exist
-        subs_id = self.key_to_subs_id[key]
-        del self.subs_id_to_key[subs_id]
+        try:
+            # Delete the subs id if exist
+            if(key in self.key_to_subs_id):
+                subs_id = self.key_to_subs_id[key]
+                del self.subs_id_to_key[subs_id]
+                # Delete the key
+                del self.key_to_subs_id[key]
 
-        # Delete the key
-        del self.key_to_subs_id[key]
-
-        # Delete the buy key to contract_id mapping
-        del self.buy_key_to_contract_id[key]
+            # Delete the buy key to contract_id mapping
+            del self.buy_key_to_contract_id[key]
+        except KeyError:
+            pass
 
         # Mark the source complete
-        source.complete()
+        # TODO is it complete ?
+        # MUST resolve
+        # source.complete()
 
 
 def get_msg_type(request) -> str:

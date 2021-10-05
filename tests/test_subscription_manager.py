@@ -39,7 +39,7 @@ async def test_subscribe(mocker):
     assert (source is source2), "same result"
     assert (source is subscription_manager.get_source({'proposal': 1})), 'source is in the cache'
     assert subscription_manager.source_exists({'proposal': 1}), "source in the cache"
-    #forget_result = subscription_manager.forget('ID12345')
-    #assert forget_result == {'forget': 'ID12345'}
+    forget_result = subscription_manager.forget('ID12345')
+    assert forget_result == {'forget': 'ID12345'}
 
 
