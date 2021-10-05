@@ -41,5 +41,6 @@ async def test_subscribe(mocker):
     assert subscription_manager.source_exists({'proposal': 1}), "source in the cache"
     forget_result = subscription_manager.forget('ID12345')
     assert forget_result == {'forget': 'ID12345'}
+    assert api.subject.is_disposed, "source is disposed"
 
 
