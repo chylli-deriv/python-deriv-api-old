@@ -179,6 +179,7 @@ class SubscriptionManager:
         # TODO is it complete ?
         # MUST resolve
         orig_source.on_completed()
+        orig_source.dispose()
 
 
 def get_msg_type(request) -> str:
