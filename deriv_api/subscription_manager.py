@@ -88,7 +88,7 @@ class SubscriptionManager:
                 print("in try before await")
                 response = await source.pipe(op.first(), op.to_future())
                 print(f"in try {response}")
-                if request['buy']:
+                if request.get('buy'):
                     self.buy_key_to_contract_id[key] = {
                         'contract_id': response['buy']['contract_id'],
                         'buy_key': key

@@ -33,13 +33,12 @@ async def test_subscribe(mocker):
     assert not subscription_manager.source_exists({'proposal': 1}), "at start there is no such source"
     # get source first time
     source, emit = await asyncio.gather(subscription_manager.subscribe({'proposal': 1}), api.emit())
-    #source: Subject = await subscription_manager.subscribe({'proposal': 1})
     assert isinstance(source, Observable)
     # get source second time
-    #source2: Subject = subscription_manager.subscribe({'proposal': 1})
-    #assert (source is source2), "same result"
-    #assert (source is subscription_manager.get_source({'proposal': 1})), 'source is in the cache'
-    #assert subscription_manager.source_exists({'proposal': 1}), "source in the cache"
+    source2, emit = await asyncio.gather(subscription_manager.subscribe({'proposal': 1}), api.emit())
+    assert (source is source2), "same result"
+    assert (source is subscription_manager.get_source({'proposal': 1})), 'source is in the cache'
+    assert subscription_manager.source_exists({'proposal': 1}), "source in the cache"
     #forget_result = subscription_manager.forget('ID12345')
     #assert forget_result == {'forget': 'ID12345'}
 
