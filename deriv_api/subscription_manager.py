@@ -25,7 +25,7 @@ class SubscriptionManager:
         self.buy_key_to_contract_id: dict = {}
         self.subs_per_msg_type: dict = {}
 
-    def subscribe(self, request: dict) -> Subject:
+    async def subscribe(self, request: dict) -> Subject:
         """
         Subscribe to a given request, returns a stream of new responses,
         Errors should be handled by the user of the stream
@@ -43,7 +43,7 @@ class SubscriptionManager:
 
         new_request: dict = request.copy()
         new_request['subscribe'] = 1
-        return self.create_new_source(new_request)
+        return await self.create_new_source(new_request)
 
     def get_source(self, request: dict) -> Optional[Subject]:
         key: str = dict_to_cache_key(request)
@@ -60,10 +60,10 @@ class SubscriptionManager:
     def source_exists(self, request: dict):
         return self.get_source(request)
 
-    def create_new_source(self, request: dict) -> Subject:
+    async def create_new_source(self, request: dict) -> Subject:
         key: str = dict_to_cache_key(request)
 
-        async def forget_old_source():
+        def forget_old_source():
             if key not in self.key_to_subs_id:
                 return
             # noinspection PyBroadException
@@ -74,7 +74,7 @@ class SubscriptionManager:
             return
 
         # TODO test this
-        source: Subject = self.api.send_and_get_source(request).pipe(
+        source: Subject = (await self.api.send_and_get_source(request)).pipe(
             op.finally_action(forget_old_source),
             op.share()
         )
@@ -82,26 +82,27 @@ class SubscriptionManager:
         self.save_subs_per_msg_type(request, key)
         print("before process_response")
         async def process_response():
-            response = None
             print("in process_response")
             # noinspection PyBroadException
             try:
                 print("in try before await")
-                response = await source.pipe(op.first(), op.to_future(self.loop.create_future))
-                print("in try")
+                response = await source.pipe(op.first(), op.to_future())
+                print(f"in try {response}")
+                if request['buy']:
+                    self.buy_key_to_contract_id[key] = {
+                        'contract_id': response['buy']['contract_id'],
+                        'buy_key': key
+                    }
+                self.save_subs_id(key, response['subscription'])
             except Exception as err:
                 print(f"get exception {err}")
                 self.remove_key_on_error(key)
 
-            if request['buy']:
-                self.buy_key_to_contract_id[key] = {
-                    'contract_id': response['buy']['contract_id'],
-                    'buy_key': key
-                }
-            self.save_subs_id(key, response['subscription'])
 
-        task = self.loop.create_task(process_response())
-        self.loop.run_until_complete(task)
+        await process_response()
+        # TODO wait to_future directly
+        # TODO no wait
+        #asyncio.wait(task)
         return source
 
     def forget(self, sub_id):

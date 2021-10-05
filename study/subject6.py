@@ -15,7 +15,7 @@ def forget_old_source():
 number = 0
 async def emit():
     global number
-    await asyncio.sleep(1)
+    await asyncio.sleep(0.1)
     subject.on_next(number)
     number = number + 1
 
