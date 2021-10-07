@@ -86,14 +86,10 @@ class SubscriptionManager:
         )
         self.sources[key] = source
         self.save_subs_per_msg_type(request, key)
-        print("before process_response")
         async def process_response():
-            print("in process_response")
             # noinspection PyBroadException
             try:
-                print("in try before await")
                 response = await source.pipe(op.first(), op.to_future())
-                print(f"in try {response}")
                 if request.get('buy'):
                     self.buy_key_to_contract_id[key] = {
                         'contract_id': response['buy']['contract_id'],
@@ -101,7 +97,6 @@ class SubscriptionManager:
                     }
                 self.save_subs_id(key, response['subscription'])
             except Exception as err:
-                print(f"get exception {err}")
                 self.remove_key_on_error(key)
 
 
@@ -126,15 +121,12 @@ class SubscriptionManager:
         return self.api.send({'forget_all': list(types)})
 
     def complete_subs_by_ids(self, *sub_ids):
-        print("..........................................")
-        print(self.subs_id_to_key)
         for sub_id in sub_ids:
             if sub_id in self.subs_id_to_key:
                 key = self.subs_id_to_key[sub_id]
                 self.complete_subs_by_key(key)
 
     def save_subs_id(self, key, subscription):
-        print(f"in save_subs_id {subscription}")
         if not subscription:
             return self.complete_subs_by_key(key)
 
@@ -143,7 +135,6 @@ class SubscriptionManager:
             self.subs_id_to_key[subs_id] = key
             self.key_to_subs_id[key] = subs_id
 
-        print(f"save subs id result  {self.subs_id_to_key} {subs_id}")
         return None
 
     def save_subs_per_msg_type(self, request, key):
