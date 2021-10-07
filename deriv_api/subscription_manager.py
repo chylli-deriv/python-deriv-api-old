@@ -40,6 +40,9 @@ class SubscriptionManager:
 
         returns {Observable} - An RxPY SObservable
         """
+        if not get_msg_type(request):
+            raise APIError('Subscription type is not found in deriv-api')
+
         if self.source_exists(request):
             return self.get_source(request)
 
@@ -117,10 +120,10 @@ class SubscriptionManager:
         # for example a proposal subscription is auto-unsubscribed after buy
 
         for t in types:
-            for k in (self.subs_per_msg_type[t] or []):
+            for k in (self.subs_per_msg_type.get(t) or []):
                 self.complete_subs_by_key(k)
             self.subs_per_msg_type[t] = []
-        return self.api.send({'forget_all': types})
+        return self.api.send({'forget_all': list(types)})
 
     def complete_subs_by_ids(self, *sub_ids):
         print("..........................................")

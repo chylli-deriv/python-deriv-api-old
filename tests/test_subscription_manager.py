@@ -4,6 +4,7 @@ from deriv_api.subscription_manager import *
 from rx.subject import Subject
 from rx import Observable
 import asyncio
+from deriv_api.errors import APIError
 
 mocked_response = {}
 
@@ -31,6 +32,12 @@ class API:
         await asyncio.sleep(0.1)
         self.subject.on_next(self.mocked_response)
 
+    def sanity_errors(self):
+        class SanityErrors:
+            def next(self, error):
+                return error
+        return SanityErrors()
+
 
 def test_get_msg_type():
     assert get_msg_type({'hello': 1}) is None
@@ -44,6 +51,8 @@ async def test_subscribe():
     subs_id = 'ID11111'
     api.mocked_response = {"msg_type": "proposal", 'subscription': {'id': subs_id}}
     assert not subscription_manager.source_exists({'proposal': 1}), "at start there is no such source"
+    with pytest.raises(APIError, match='Subscription type is not found in deriv-api'):
+        await subscription_manager.subscribe({"no such type"})
     # get source first time
     source, emit = await asyncio.gather(subscription_manager.subscribe({'proposal': 1}), api.emit())
     assert isinstance(source, Observable)
@@ -95,3 +104,9 @@ async def test_subscribe():
     source2, emit = await asyncio.gather(subscription_manager.subscribe(request), api.emit())
     assert api.send_and_get_source_called == 1 , "cache is cleared so the new call will get"
     assert source2 is not source, "new source is not the old one"
+
+def test_forget_all():
+    api = API()
+    subscription_manager = SubscriptionManager(api)
+    result = subscription_manager.forget_all("hello")
+    assert result == {'forget_all': ["hello"]}
