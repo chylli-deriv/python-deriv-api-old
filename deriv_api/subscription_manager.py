@@ -17,8 +17,7 @@ streams_list = ['balance', 'candles', 'p2p_advertiser', 'p2p_order', 'proposal',
 
 
 class SubscriptionManager:
-    def __init__(self, loop: asyncio.BaseEventLoop, api):
-        self.loop = loop
+    def __init__(self, api):
         self.api = api
         self.sources: dict = {}
         self.orig_sources: dict = {}

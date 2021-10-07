@@ -27,13 +27,13 @@ def test_get_msg_type():
 @pytest.mark.asyncio
 async def test_subscribe(mocker):
     api: API = API()
-    loop = asyncio.get_event_loop()
-    subscription_manager = SubscriptionManager(loop, api)
+    subscription_manager = SubscriptionManager(api)
     api.mocked_response = {"msg_type": "proposal", 'subscription': {'id':'ID12345'}}
     assert not subscription_manager.source_exists({'proposal': 1}), "at start there is no such source"
     # get source first time
     source, emit = await asyncio.gather(subscription_manager.subscribe({'proposal': 1}), api.emit())
     assert isinstance(source, Observable)
+
     # get source second time
     source2, emit = await asyncio.gather(subscription_manager.subscribe({'proposal': 1}), api.emit())
     assert (source is source2), "same result"
@@ -42,5 +42,3 @@ async def test_subscribe(mocker):
     forget_result = subscription_manager.forget('ID12345')
     assert forget_result == {'forget': 'ID12345'}
     assert api.subject.is_disposed, "source is disposed"
-
-
