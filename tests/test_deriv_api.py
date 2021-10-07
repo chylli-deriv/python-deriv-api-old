@@ -2,7 +2,7 @@ import pytest_mock
 from deriv_api import deriv_api
 
 def test_deriv_api(mocker):
-    mocker.patch('deriv_api.deriv_api.DerivAPI.apiconnect', return_value='')
+    mocker.patch('deriv_api.deriv_api.DerivAPI.api_connect', return_value='')
     deriv_api_obj = deriv_api.DerivAPI(1234)
     assert(isinstance(deriv_api_obj, deriv_api.DerivAPI))
     
