@@ -1,5 +1,3 @@
-import asyncio
-
 from deriv_api.utils import dict_to_cache_key
 from deriv_api.errors import APIError
 from rx import operators as op
@@ -14,8 +12,6 @@ from typing import Optional
 streams_list = ['balance', 'candles', 'p2p_advertiser', 'p2p_order', 'proposal',
                 'proposal_array', 'proposal_open_contract', 'ticks', 'ticks_history', 'transaction',
                 'website_status', 'buy']
-
-# TODO test no such type
 
 class SubscriptionManager:
     def __init__(self, api):
