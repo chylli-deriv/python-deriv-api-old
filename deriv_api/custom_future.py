@@ -16,8 +16,8 @@ class CustomFuture(Future):
             try:
                 result = f.result()
                 custom_future.set_result(result)
-            except CancelledError:
-                custom_future.cancel()
+            except CancelledError as err:
+                custom_future.cancel(*(err.args))
             except BaseException as err:
                 custom_future.set_exception(err)
 
@@ -32,6 +32,10 @@ class CustomFuture(Future):
         self.state = 'rejected'
         return super().set_exception(*args)
 
+    def cancel(self, *msg):
+        self.state = 'cancelled'
+        return super().cancel(*msg)
+
     def is_pending(self) -> bool:
         return self.state == 'pending'
 
@@ -40,3 +44,6 @@ class CustomFuture(Future):
 
     def is_rejected(self) -> bool:
         return self.state == 'rejected'
+
+    def is_cancelled(self) -> bool:
+        return self.cancelled()

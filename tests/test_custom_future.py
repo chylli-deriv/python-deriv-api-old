@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 from deriv_api.custom_future import CustomFuture
-from asyncio.exceptions import InvalidStateError
+from asyncio.exceptions import InvalidStateError, CancelledError
 def test_custom_future():
     f1 = CustomFuture()
     assert f1.is_pending()
@@ -17,17 +17,18 @@ def test_custom_future():
 
 @pytest.mark.asyncio
 async def test_wrap():
+    # test resolved
     f1 = asyncio.Future()
     f2 = CustomFuture.wrap(f1)
     assert isinstance(f2, CustomFuture)
     assert f1.get_loop() is f2.get_loop()
     assert f2.is_pending()
     f1.set_result("hello")
-    #f1.get_loop().run_until_complete(f1)
     await f2
     assert f2.result() == "hello"
     assert f2.done()
 
+    # test reject
     f1 = asyncio.Future()
     f2 = CustomFuture.wrap(f1)
     f1.set_exception(Exception("hello"))
@@ -35,3 +36,12 @@ async def test_wrap():
         await f2
     assert f2.done()
     assert f2.is_rejected()
+
+    # test cancel
+    f1 = asyncio.Future()
+    f2 = CustomFuture.wrap(f1)
+    f1.cancel("hello")
+    with pytest.raises(CancelledError, match='hello'):
+        await f2
+    assert f2.done()
+    assert f2.is_cancelled()
