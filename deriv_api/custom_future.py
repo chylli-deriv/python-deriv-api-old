@@ -1,10 +1,10 @@
+from __future__ import annotations
 from asyncio import Future
 from asyncio import CancelledError
 class CustomFuture(Future):
-    def __init__(self, *args):
+    def __init__(self, *, loop=None):
         self.state = 'pending'
-        super().__init__(*args)
-        return self
+        super().__init__(loop = loop)
 
     @classmethod
     def wrap(cls, future: Future) -> CustomFuture:
@@ -18,10 +18,11 @@ class CustomFuture(Future):
                 custom_future.set_result(result)
             except CancelledError:
                 custom_future.cancel()
-            except Exception as err:
+            except BaseException as err:
                 custom_future.set_exception(err)
 
         future.add_done_callback(done_callback)
+        return custom_future
 
     def set_result(self, *args):
         self.state = 'resolved'
