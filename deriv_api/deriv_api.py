@@ -1,12 +1,14 @@
 from deriv_api.cache import Cache
 from deriv_api.deriv_api_calls import DerivAPICalls
 from deriv_api.in_memory import InMemory
+from deriv_api.subscription_manager import  SubscriptionManager
 import websockets
 import json
 import logging
 from deriv_api.errors import APIError, ConstructionError
 from deriv_api.utils import dict_to_cache_key, is_valid_url
 import re
+from rx.subject import Subject
 
 logging.basicConfig(
     format="%(asctime)s %(message)s",
@@ -58,6 +60,10 @@ class DerivAPI(DerivAPICalls):
 
         if storage:
             self.storage = Cache(self, storage)
+
+        self.req_id = 0
+        self.pending_requests = {}
+        self.subscription_manager: SubscriptionManager = SubscriptionManager(self)
 
         # If we have the storage look that one up
         self.cache = Cache(self.storage if self.storage else self, cache)
@@ -112,7 +118,24 @@ class DerivAPI(DerivAPICalls):
                 self.wsconnection = ''
                 await self.send_receive()
             return self.parse_response(response)
-   
+
+    async def subscribe(self, request):
+        return await self.subscription_manager.subscribe(request)
+
+    # TODO
+    # 1 add all funcs taht include subscription_manager
+    # 2. check all functs that subscription_manager will called
+    # 3. check async on all funcs of 1 and 2
+    # 4. some function like "send" or manager `create_new_source` will await the first response
+    # 5. make sure that first response can be got by other subscription
+    # 6. dict.get(key, value) to set value
+    async def send_and_get_source(self, request: dict):
+        pending = Subject()
+        if 'req_id' not in request:
+            self.req_id += 1
+            request['req_id'] = self.req_id
+        self.pending_requests[request['req_id']] = pending
+
     def parse_response(self, message):
         data = json.loads(message)
         return data
