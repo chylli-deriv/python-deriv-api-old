@@ -4,9 +4,12 @@ from asyncio import CancelledError
 from typing import Optional
 
 class CustomFuture(Future):
-    def __init__(self, *, loop=None):
+    def __init__(self, *, loop=None, label=None):
         self.state = 'pending'
         super().__init__(loop = loop)
+        if not label:
+            label = f"Future {id(self)}"
+        self.label = label
 
     @classmethod
     def wrap(cls, future: Future) -> CustomFuture:
@@ -67,7 +70,9 @@ class CustomFuture(Future):
                 return
 
             def inside_callback(internal_future: CustomFuture):
+                print(f"in inside_callback {internal_future.label} out future {new_future.label}")
                 if internal_future.is_cancelled():
+                    print("internal future is cancelled")
                     new_future.cancel('Callback future cancelled')
                     return
                 if internal_future.is_rejected():

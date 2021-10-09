@@ -57,6 +57,7 @@ async def test_future_then():
         return f
     f2 = f1.then(then_callback)
     f1.set_result("f1 ok")
+    print(f"frist f1 {f1.label} f2 {f2.label}")
     assert (await f2) == 'result: f1 ok', "if inside future has result, then_future will has result too"
 
     # test callback fail
@@ -112,7 +113,7 @@ async def test_future_then():
     with pytest.raises(Exception, match='f1 exception f1 bad'):
         await f2
 
-    # upstream canceled
+    # upstream cancelled
     f1 = CustomFuture()
 
     def else_callback(last_exception: Exception):
@@ -125,3 +126,16 @@ async def test_future_then():
     with pytest.raises(asyncio.exceptions.CancelledError, match='Upstream future cancelled'):
         await f2
 
+    # callback future cancelled
+    f1 = CustomFuture()
+
+    def then_callback(result):
+        f = CustomFuture()
+        f.cancel(f"f1 ok {result}")
+        return f
+
+    f2 = f1.then(then_callback)
+    f1.set_result('f1 ok')
+    print(f"f1 {f1.label} f2 {f2.label}")
+    with pytest.raises(asyncio.exceptions.CancelledError, match='Callback future cancelled'):
+        await f2
