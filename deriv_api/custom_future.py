@@ -77,3 +77,6 @@ class CustomFuture(Future):
 
         self.add_done_callback(done_callback)
         return new_future
+
+    def catch(self, else_callback):
+        return self.then(None, else_callback)

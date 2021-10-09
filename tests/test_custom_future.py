@@ -94,7 +94,7 @@ async def test_future_then():
         f.set_result(f"f1 exception {last_exception.args[0]}")
         return f
 
-    f2 = f1.then(None, else_callback)
+    f2 = f1.catch(else_callback)
     f1.set_exception(Exception("f1 bad"))
     assert (await f2) == 'f1 exception f1 bad'
 
