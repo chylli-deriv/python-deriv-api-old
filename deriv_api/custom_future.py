@@ -78,16 +78,7 @@ class CustomFuture(Future):
                 new_future.cascade(self)
 
             def inside_callback(internal_future: CustomFuture):
-                print(f"in inside_callback {internal_future.label} out future {new_future.label}")
-                if internal_future.is_cancelled():
-                    print("internal future is cancelled")
-                    new_future.cancel('Callback future cancelled')
-                    return
-                if internal_future.is_rejected():
-                    new_future.set_exception(internal_future.exception())
-                    return
-                if internal_future.is_resolved():
-                    new_future.set_result(internal_future.result())
+                new_future.cascade(internal_future)
 
             f.add_done_callback(inside_callback)
 

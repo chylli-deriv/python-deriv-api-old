@@ -131,13 +131,13 @@ async def test_future_then():
 
     def then_callback(result):
         f = CustomFuture()
-        f.cancel(f"f1 ok {result}")
+        f.cancel(f"callback cancelled with f1 {result}")
         return f
 
     f2 = f1.then(then_callback)
     f1.set_result('f1 ok')
     print(f"f1 {f1.label} f2 {f2.label}")
-    with pytest.raises(asyncio.exceptions.CancelledError, match='Callback future cancelled'):
+    with pytest.raises(asyncio.exceptions.CancelledError, match='callback cancelled with f1 f1 ok'):
         await f2
 
     # test no right call back
