@@ -139,3 +139,16 @@ async def test_future_then():
     print(f"f1 {f1.label} f2 {f2.label}")
     with pytest.raises(asyncio.exceptions.CancelledError, match='Callback future cancelled'):
         await f2
+
+    # test no right call back
+    f1 = CustomFuture()
+
+    def else_callback(result):
+        f = CustomFuture()
+        f.cancel(f"f1 ok {result}")
+        return f
+
+    f2 = f1.then(None, else_callback)
+    f1.set_result('f1 ok')
+    print(f"f1 {f1.label} f2 {f2.label}")
+    assert (await f2) == 'f1 ok' , 'If no suitable callback, then clone the result'

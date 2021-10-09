@@ -1,6 +1,6 @@
 from __future__ import annotations
 from asyncio import Future
-from asyncio import CancelledError
+from asyncio import CancelledError, InvalidStateError
 from typing import Optional
 
 class CustomFuture(Future):
@@ -17,16 +17,7 @@ class CustomFuture(Future):
             return future
 
         custom_future = cls(loop = future.get_loop())
-        def done_callback(f: Future):
-            try:
-                result = f.result()
-                custom_future.set_result(result)
-            except CancelledError as err:
-                custom_future.cancel(*(err.args))
-            except BaseException as err:
-                custom_future.set_exception(err)
-
-        future.add_done_callback(done_callback)
+        custom_future.cascade(future)
         return custom_future
 
     def set_result(self, *args):
@@ -53,6 +44,23 @@ class CustomFuture(Future):
     def is_cancelled(self) -> bool:
         return self.cancelled()
 
+    def cascade(self, future: CustomFuture) -> CustomFuture:
+        """copy another future result to itself"""
+        if self.done():
+            raise InvalidStateError('invalid state')
+
+        def done_callback(f: Future):
+            try:
+                result = f.result()
+                self.set_result(result)
+            except CancelledError as err:
+                self.cancel(*(err.args))
+            except BaseException as err:
+                self.set_exception(err)
+
+        future.add_done_callback(done_callback)
+        return self
+
     def then(self, then_callback, else_callback=None) -> CustomFuture:
         new_future = CustomFuture(loop=self.get_loop())
         def done_callback(myself: CustomFuture):
@@ -67,7 +75,7 @@ class CustomFuture(Future):
                 f = then_callback(myself.result())
 
             if f is None:
-                return
+                new_future.cascade(self)
 
             def inside_callback(internal_future: CustomFuture):
                 print(f"in inside_callback {internal_future.label} out future {new_future.label}")
