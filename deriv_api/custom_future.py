@@ -5,7 +5,6 @@ from typing import Optional
 
 class CustomFuture(Future):
     def __init__(self, *, loop=None, label=None):
-        self.state = 'pending'
         super().__init__(loop = loop)
         if not label:
             label = f"Future {id(self)}"
@@ -20,26 +19,20 @@ class CustomFuture(Future):
         custom_future.cascade(future)
         return custom_future
 
-    def set_result(self, *args):
-        self.state = 'resolved'
+    def resolve(self, *args):
         return super().set_result(*args)
 
-    def set_exception(self, *args):
-        self.state = 'rejected'
+    def reject(self, *args):
         return super().set_exception(*args)
 
-    def cancel(self, *msg):
-        self.state = 'cancelled'
-        return super().cancel(*msg)
-
     def is_pending(self) -> bool:
-        return self.state == 'pending'
+        return not self.done()
 
     def is_resolved(self) -> bool:
-        return self.state == 'resolved'
+        return self.done() and not self.cancelled() and not self.exception()
 
     def is_rejected(self) -> bool:
-        return self.state == 'rejected'
+        return self.done() and not self.cancelled() and self.exception()
 
     def is_cancelled(self) -> bool:
         return self.cancelled()

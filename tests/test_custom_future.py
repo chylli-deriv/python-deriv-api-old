@@ -6,13 +6,13 @@ from asyncio.exceptions import InvalidStateError, CancelledError
 def test_custom_future():
     f1 = CustomFuture()
     assert f1.is_pending()
-    f1.set_result("hello")
+    f1.resolve("hello")
     assert f1.result() == "hello"
     assert f1.is_resolved()
     with pytest.raises(InvalidStateError, match="invalid state"):
-        f1.set_exception("world")
+        f1.reject("world")
     f2 = CustomFuture()
-    f2.set_exception(Exception)
+    f2.reject(Exception)
     assert f2.is_rejected()
 
 @pytest.mark.asyncio
