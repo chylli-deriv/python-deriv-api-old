@@ -1,16 +1,12 @@
 from deriv_api.cache import Cache
 from deriv_api.deriv_api_calls import DerivAPICalls
 from deriv_api.in_memory import InMemory
-from deriv_api.subscription_manager import  SubscriptionManager
 import websockets
 import json
 import logging
 from deriv_api.errors import APIError, ConstructionError
 from deriv_api.utils import dict_to_cache_key, is_valid_url
 import re
-from rx.subject import Subject
-from deriv_api.custom_future import CustomFuture
-from typing import Optional
 
 logging.basicConfig(
     format="%(asctime)s %(message)s",
@@ -36,6 +32,7 @@ class DerivAPI(DerivAPICalls):
     property {Cache} cache - Temporary cache default to {InMemory}
     property {Cache} storage - If specified, uses a more persistent cache (local storage, etc.)
     """
+    wsconnection:str = ''
     storage = ''
     def __init__(self, **options):
         endpoint = options.get('endpoint', 'frontend.binaryws.com')
@@ -43,7 +40,6 @@ class DerivAPI(DerivAPICalls):
         brand = options.get('brand', '')
         cache = options.get('cache', InMemory())
         storage = options.get('storage')
-        self.wsconnection = None
 
         if options.get('connection'):
             self.wsconnection = options.get('connection')
@@ -62,11 +58,6 @@ class DerivAPI(DerivAPICalls):
 
         if storage:
             self.storage = Cache(self, storage)
-
-        self.req_id = 0
-        self.pending_requests = {}
-        self.connected = CustomFuture()
-        self.subscription_manager: SubscriptionManager = SubscriptionManager(self)
 
         # If we have the storage look that one up
         self.cache = Cache(self.storage if self.storage else self, cache)
@@ -104,7 +95,7 @@ class DerivAPI(DerivAPICalls):
             if not self.shouldReconnect:
                return APIError("API Connection Closed")
             else:
-                self.wsconnection = None
+                self.wsconnection = ''
                 await self.api_connect()
                 response = await self.send_receive(message)
 
@@ -118,37 +109,10 @@ class DerivAPI(DerivAPICalls):
         await websocket.send(json.dumps(message))
         async for response in websocket:
             if response is None:
-                self.wsconnection = None
+                self.wsconnection = ''
                 await self.send_receive()
             return self.parse_response(response)
-
-    async def subscribe(self, request):
-        return await self.subscription_manager.subscribe(request)
-
-    def is_connection_closed(self):
-        return self.connection.ready_state == 2 or self.connection.ready_state == 3
-
-
-    # TODO
-    # 1 add all funcs taht include subscription_manager
-    # 2. check all functs that subscription_manager will called
-    # 3. check async on all funcs of 1 and 2
-    # 4. some function like "send" or manager `create_new_source` will await the first response
-    # 5. make sure that first response can be got by other subscription
-    # 6. dict.get(key, value) to set value
-    def send_and_get_source(self, request: dict):
-        pending = Subject()
-        if 'req_id' not in request:
-            self.req_id += 1
-            request['req_id'] = self.req_id
-        self.pending_requests[request['req_id']] = pending
-        def connected_cb():
-            if self.is_connection_closed():
-                return CustomFuture().set_result(1)
-            return self.connection.send(JSON.stringify(request))
-        self.connected.then(connected_cb).catch(lambda e: pending.on_error(e))
-        return pending
-
+   
     def parse_response(self, message):
         data = json.loads(message)
         return data
