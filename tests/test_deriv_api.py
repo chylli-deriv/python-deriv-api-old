@@ -13,12 +13,14 @@ def test_connect_parameter():
     with pytest.raises(ConstructionError, match=r"Invalid URL:local123host"):
         deriv_api_obj = deriv_api.DerivAPI(app_id=1234, endpoint='local123host')
 
-def test_deriv_api(mocker):
+@pytest.mark.asyncio
+async def test_deriv_api(mocker):
     mocker.patch('deriv_api.deriv_api.DerivAPI.api_connect', return_value='')
     deriv_api_obj = deriv_api.DerivAPI(app_id=1234, endpoint='localhost')
     assert(isinstance(deriv_api_obj, deriv_api.DerivAPI))
 
-def test_parse_response(mocker):
+@pytest.mark.asyncio
+async def test_parse_response(mocker):
     mocker.patch('deriv_api.deriv_api.DerivAPI.api_connect', return_value='')
     deriv_api_obj = deriv_api.DerivAPI(app_id=1234, endpoint='localhost')
 
@@ -31,7 +33,8 @@ def test_parse_response(mocker):
     data = deriv_api_obj.parse_response(message)
     assert data['error']['code'] == 'InputValidationFailed'
 
-def test_get_url(mocker):
+@pytest.mark.asyncio
+async def test_get_url(mocker):
     deriv_api_obj = get_deriv_api(mocker)
     assert deriv_api_obj.get_url("localhost") == "wss://localhost"
     assert deriv_api_obj.get_url("ws://localhost") == "ws://localhost"

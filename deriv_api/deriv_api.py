@@ -3,6 +3,7 @@ from deriv_api.deriv_api_calls import DerivAPICalls
 from deriv_api.in_memory import InMemory
 from deriv_api.subscription_manager import  SubscriptionManager
 import websockets
+from websockets.legacy.client import WebSocketClientProtocol
 import json
 import logging
 from deriv_api.errors import APIError, ConstructionError
@@ -10,7 +11,9 @@ from deriv_api.utils import dict_to_cache_key, is_valid_url
 import re
 from rx.subject import Subject
 from deriv_api.custom_future import CustomFuture
-from typing import Optional
+from typing import Optional, Dict
+import asyncio
+from rx import operators as op
 
 logging.basicConfig(
     format="%(asctime)s %(message)s",
@@ -43,10 +46,10 @@ class DerivAPI(DerivAPICalls):
         brand = options.get('brand', '')
         cache = options.get('cache', InMemory())
         storage = options.get('storage')
-        self.wsconnection = None
+        self.wsconnection: Optional[WebSocketClientProtocol] = None
 
         if options.get('connection'):
-            self.wsconnection = options.get('connection')
+            self.wsconnection: Optional[WebSocketClientProtocol] = options.get('connection')
         else:
             if not options.get('app_id'):
                 raise ConstructionError('An app_id is required to connect to the API')
@@ -64,12 +67,37 @@ class DerivAPI(DerivAPICalls):
             self.storage = Cache(self, storage)
 
         self.req_id = 0
-        self.pending_requests = {}
+        self.pending_requests: Dict[str, Subject] = {}
         self.connected = CustomFuture()
         self.subscription_manager: SubscriptionManager = SubscriptionManager(self)
-
+        self.sanity_errors: Subject = Subject()
         # If we have the storage look that one up
         self.cache = Cache(self.storage if self.storage else self, cache)
+
+        asyncio.create_task(self.api_connect())
+
+    async def __connect_and_start_watching_data(self):
+        await self.api_connect()
+        asyncio.create_task(self.__wait_data())
+        return
+
+    async def __wait_data(self):
+        while self.connected.is_resolved():
+            data = await self.wsconnection.recv()
+            response = json.loads(data)
+
+            # TODO add self.events stream
+
+            req_id = response.get('req_id', None)
+            if not req_id or req_id not in self.pending_requests:
+                self.sanity_errors.on_next(APIError("Extra response"))
+                continue
+
+            # TODO expect_response_types
+            request = response['echo_req']
+            # TODO process poc stream
+            # TODO process subscription
+            self.pending_requests[req_id].on_next(response)
 
     def __set_apiURL(self, connection_argument):
         self.api_url = connection_argument.get('endpoint_url')+"/websockets/v3?app_id="+connection_argument.get('app_id')+"&l="+connection_argument.get('lang')+"&brand="+connection_argument.get('brand')
@@ -95,38 +123,21 @@ class DerivAPI(DerivAPICalls):
         if not self.wsconnection and self.shouldReconnect:
             self.wsconnection = await websockets.connect(self.api_url)
 
+        self.connected.set_result(1)
         return self.wsconnection
 
-    async def send(self, message):
-        try:
-            response = await self.send_receive(message)
-        except (websockets.ConnectionClosed, websockets.ConnectionClosedError):
-            if not self.shouldReconnect:
-               return APIError("API Connection Closed")
-            else:
-                self.wsconnection = None
-                await self.api_connect()
-                response = await self.send_receive(message)
+    async def send(self, request):
+        response_future: CustomFuture = CustomFuture.wrap(self.send_and_get_source(request).pipe(op.first(), op.to_future()))
+        # TODO cache
+        return await response_future
 
-        await self.cache.set(message, response)
-        if self.storage:
-            self.storage.set(message, response)
-        return response
-
-    async def send_receive(self, message):
-        websocket = await self.api_connect()
-        await websocket.send(json.dumps(message))
-        async for response in websocket:
-            if response is None:
-                self.wsconnection = None
-                await self.send_receive()
-            return self.parse_response(response)
 
     async def subscribe(self, request):
         return await self.subscription_manager.subscribe(request)
 
-    def is_connection_closed(self):
-        return self.connection.ready_state == 2 or self.connection.ready_state == 3
+    # TODO fix this one
+    #def is_connection_closed(self):
+    #    return self.connection.ready_state == 2 or self.connection.ready_state == 3
 
 
     # TODO
@@ -142,11 +153,13 @@ class DerivAPI(DerivAPICalls):
             self.req_id += 1
             request['req_id'] = self.req_id
         self.pending_requests[request['req_id']] = pending
-        def connected_cb():
-            if self.is_connection_closed():
-                return CustomFuture().set_result(1)
-            return self.connection.send(JSON.stringify(request))
-        self.connected.then(connected_cb).catch(lambda e: pending.on_error(e))
+        def connected_cb(result):
+            return CustomFuture.wrap(asyncio.create_task(self.wsconnection.send(json.dumps(request))))
+        def error_cb(exception):
+            pending.on_error(exception)
+            print("error_cb")
+            return CustomFuture().set_result(1)
+        self.connected.then(connected_cb).catch(error_cb)
         return pending
 
     def parse_response(self, message):

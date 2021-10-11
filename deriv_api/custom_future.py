@@ -19,10 +19,12 @@ class CustomFuture(Future):
         return custom_future
 
     def resolve(self, *args):
-        return super().set_result(*args)
+        super().set_result(*args)
+        return self
 
     def reject(self, *args):
-        return super().set_exception(*args)
+        super().set_exception(*args)
+        return self
 
     def is_pending(self) -> bool:
         return not self.done()
@@ -54,6 +56,8 @@ class CustomFuture(Future):
         return self
 
     def then(self, then_callback, else_callback=None) -> CustomFuture:
+        if then_callback is None and else_callback is None:
+            raise Exception('result of callback is not a future object')
         new_future = CustomFuture(loop=self.get_loop())
         def done_callback(myself: CustomFuture):
             f: Optional[CustomFuture] = None
@@ -62,12 +66,13 @@ class CustomFuture(Future):
                 return
 
             if myself.is_rejected() and else_callback:
-                    f = else_callback(myself.exception())
+                f = else_callback(myself.exception())
             elif myself.is_resolved() and then_callback:
                 f = then_callback(myself.result())
 
             if f is None:
-                new_future.cascade(self)
+                new_future.cascade(myself)
+                return
 
             def inside_callback(internal_future: CustomFuture):
                 new_future.cascade(internal_future)
