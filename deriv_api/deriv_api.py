@@ -74,18 +74,20 @@ class DerivAPI(DerivAPICalls):
         # If we have the storage look that one up
         self.cache = Cache(self.storage if self.storage else self, cache)
 
-        asyncio.create_task(self.api_connect())
+        asyncio.create_task(self.__connect_and_start_watching_data())
 
     async def __connect_and_start_watching_data(self):
         await self.api_connect()
+        print("connect ok")
         asyncio.create_task(self.__wait_data())
         return
 
     async def __wait_data(self):
+        print("start wait data")
         while self.connected.is_resolved():
             data = await self.wsconnection.recv()
             response = json.loads(data)
-
+            print(f"get resonse {response}")
             # TODO add self.events stream
 
             req_id = response.get('req_id', None)
@@ -123,7 +125,7 @@ class DerivAPI(DerivAPICalls):
         if not self.wsconnection and self.shouldReconnect:
             self.wsconnection = await websockets.connect(self.api_url)
 
-        self.connected.set_result(1)
+        self.connected.set_result(True)
         return self.wsconnection
 
     async def send(self, request):
@@ -168,4 +170,5 @@ class DerivAPI(DerivAPICalls):
 
     async def disconnect(self):
         self.shouldReconnect = False
+        self.connected = CustomFuture.resolve(False)
         await self.wsconnection.close()
