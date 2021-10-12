@@ -35,7 +35,7 @@ class Cache(DerivAPICalls):
             return await self.get(request)
 
         response = await self.api.send(request)
-        await self.set(request, response)
+        self.set(request, response)
         return response
 
     async def has(self, request):

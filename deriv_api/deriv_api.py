@@ -179,7 +179,7 @@ class DerivAPI(DerivAPICalls):
 
     async def disconnect(self):
         self.shouldReconnect = False
-        self.connected = CustomFuture.resolve(False)
+        self.connected = CustomFuture().resolve(False)
         await self.wsconnection.close()
 
     # TODO optimize create_and_watch_task and wait_data_task
