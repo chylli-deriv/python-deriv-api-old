@@ -61,18 +61,6 @@ async def test_future_then():
 
     # test callback fail
     f1 = CustomFuture()
-    def then_callback(last_result):
-        f = CustomFuture()
-        f.set_exception(Exception(f"result: {last_result}"))
-        return f
-
-    f2 = f1.then(then_callback)
-    f1.set_result("f1 ok")
-    with pytest.raises(Exception, match='result: f1 ok'):
-        await f2
-
-    # test callback fail
-    f1 = CustomFuture()
 
     def then_callback(last_result):
         f = CustomFuture()

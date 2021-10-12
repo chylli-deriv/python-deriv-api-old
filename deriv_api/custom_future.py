@@ -1,6 +1,5 @@
 from __future__ import annotations
-from asyncio import Future
-from asyncio import CancelledError, InvalidStateError
+from asyncio import Future, CancelledError, InvalidStateError
 from typing import Optional
 
 class CustomFuture(Future):
@@ -37,7 +36,7 @@ class CustomFuture(Future):
     def is_cancelled(self) -> bool:
         return self.cancelled()
 
-    def cascade(self, future: CustomFuture) -> CustomFuture:
+    def cascade(self, future: Future) -> CustomFuture:
         """copy another future result to itself"""
         if self.done():
             raise InvalidStateError('invalid state')
