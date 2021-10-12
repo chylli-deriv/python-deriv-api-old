@@ -1,5 +1,5 @@
+# run it like PYTHONPATH=. python3 examples/simple_bot1.py
 import sys
-sys.path.append('.')
 import asyncio
 import os
 from deriv_api import deriv_api
@@ -10,10 +10,11 @@ api_token = os.getenv('DERIV_TOKEN', '')
 if len(api_token) == 0:
     sys.exit("DERIV_TOKEN environment variable is not set")
 
+
 async def sample_calls():
     api = deriv_api.DerivAPI(app_id=app_id)
 
-    response = await api.ping({'ping':1})
+    response = await api.ping({'ping': 1})
     if response['ping']:
         print(response['ping'])
 
@@ -44,8 +45,8 @@ async def sample_calls():
     ''' Get proposal '''
     proposal = await api.proposal({"proposal": 1, "amount": 100, "barrier": "+0.1", "basis": "payout",
                                    "contract_type": "CALL", "currency": "USD", "duration": 60, "duration_unit": "s",
-                                   "symbol": "R_100" ,
-                                   #"subscribe":1
+                                   "symbol": "R_100",
+                                   # "subscribe":1
                                    })
     print(proposal)
 
@@ -57,9 +58,10 @@ async def sample_calls():
     print(response.get('buy').get('longcode'))
 
     ''' open contracts '''
-    poc = await api.proposal_open_contract({"proposal_open_contract": 1, "contract_id": response.get('buy').get('contract_id'),
-                                      #"subscribe": 1
-                                      })
+    poc = await api.proposal_open_contract(
+        {"proposal_open_contract": 1, "contract_id": response.get('buy').get('contract_id'),
+         # "subscribe": 1
+         })
     print(poc)
 
     if not poc.get('proposal_open_contract').get('is_sold'):
@@ -72,10 +74,11 @@ async def sample_calls():
     print(profit_table)
 
     ''' transaction statement '''
-    statement = await api.statement({"statement": 1,"description": 1,"limit": 100,"offset": 25})
+    statement = await api.statement({"statement": 1, "description": 1, "limit": 100, "offset": 25})
     print(statement)
 
     await api.disconnect()
     await api.clear()
+
 
 asyncio.run(sample_calls())

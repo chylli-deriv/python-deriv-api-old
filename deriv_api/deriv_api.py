@@ -75,6 +75,7 @@ class DerivAPI(DerivAPICalls):
         self.connected = CustomFuture()
         self.subscription_manager: SubscriptionManager = SubscriptionManager(self)
         self.sanity_errors: Subject = Subject()
+        self.subscription_manager = SubscriptionManager(self)
         self.wait_data_flag = False
         self.wait_data_task = CustomFuture().set_result(1)
         # If we have the storage look that one up
@@ -84,6 +85,7 @@ class DerivAPI(DerivAPICalls):
 
     async def __connect_and_start_watching_data(self):
         await self.api_connect()
+        print(f"in __connect_and_start connected is {self.connected.is_resolved()}")
         self.wait_data_flag = True
         self.wait_data_task = asyncio.create_task(self.__wait_data())
         return
@@ -128,8 +130,9 @@ class DerivAPI(DerivAPICalls):
     async def api_connect(self):
         if not self.wsconnection and self.shouldReconnect:
             self.wsconnection = await websockets.connect(self.api_url)
-
+        # TODO check: don't replace old self.connected, because it will affect the `then` clause
         self.connected.set_result(True)
+        print(f"in api_connect {self.connected.result()}")
         return self.wsconnection
 
     async def send(self, request):
@@ -164,14 +167,21 @@ class DerivAPI(DerivAPICalls):
         if 'req_id' not in request:
             self.req_id += 1
             request['req_id'] = self.req_id
+        print(f"req id {self.req_id}")
         self.pending_requests[request['req_id']] = pending
         def connected_cb(result):
+            print(f"in connected cb")
             return CustomFuture.wrap(asyncio.create_task(self.wsconnection.send(json.dumps(request))))
         def error_cb(exception):
             pending.on_error(exception)
             return CustomFuture().set_result(1)
-        self.connected.then(connected_cb).catch(error_cb)
+        print(f"connected in line 178 {self.connected.is_resolved()}")
+        self.connected.then(connected_cb).then(lambda d: print("sending ? .....")).catch(error_cb)
+        print(f"in line 180")
         return pending
+
+    async def subscribe(self, request):
+        return await self.subscription_manager.subscribe(request)
 
     def parse_response(self, message):
         data = json.loads(message)

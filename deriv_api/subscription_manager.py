@@ -63,7 +63,6 @@ class SubscriptionManager:
 
     async def create_new_source(self, request: dict) -> Subject:
         key: str = dict_to_cache_key(request)
-
         def forget_old_source():
             if key not in self.key_to_subs_id:
                 return
@@ -73,13 +72,15 @@ class SubscriptionManager:
             except Exception:
                 pass
             return
-
+        print("before send_and_get_soruce")
         # TODO test this
-        self.orig_sources[key]: Subject = await self.api.send_and_get_source(request)
+        self.orig_sources[key]: Subject = self.api.send_and_get_source(request)
+        print("just after sned and get source")
         source: Observable = self.orig_sources[key].pipe(
             op.finally_action(forget_old_source),
             op.share()
         )
+        print("after api.send_and_get_source")
         self.sources[key] = source
         self.save_subs_per_msg_type(request, key)
         async def process_response():
@@ -94,12 +95,14 @@ class SubscriptionManager:
                 self.save_subs_id(key, response['subscription'])
             except Exception as err:
                 self.remove_key_on_error(key)
-
+        # TODO not async, create task, and push task to an array, and clear them at last
+        # TODO I guess waiting first response will cause the source miss the first one
 
         await process_response()
         # TODO wait to_future directly
         # TODO no wait
         #asyncio.wait(task)
+        print(f"the source in crate_new_source is {id(source)}")
         return source
 
     def forget(self, sub_id):
