@@ -50,7 +50,7 @@ class Cache(DerivAPICalls):
         """Redirected to the method defined by the storage"""
         return self.storage.get_by_msg_type(msg_type)
 
-    async def set(self, request, response):
+    def set(self, request, response):
         """Redirected to the method defined by the storage"""
         return self.storage.set(dict_to_cache_key(request), response)
 

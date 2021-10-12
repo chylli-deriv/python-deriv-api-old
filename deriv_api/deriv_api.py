@@ -15,6 +15,10 @@ from typing import Optional, Dict
 import asyncio
 from rx import operators as op
 
+# TODO in the doc , list this ExpectResponse is missed
+# middleware is missed
+# events is missed
+
 logging.basicConfig(
     format="%(asctime)s %(message)s",
     level=logging.ERROR
@@ -129,8 +133,14 @@ class DerivAPI(DerivAPICalls):
         return self.wsconnection
 
     async def send(self, request):
+        print(f"sending {request}")
         response_future: CustomFuture = CustomFuture.wrap(self.send_and_get_source(request).pipe(op.first(), op.to_future()))
-        # TODO cache
+        def set_cache(response):
+            self.cache.set(request, response)
+            if self.storage:
+                self.storage.set(request, response)
+            return CustomFuture().set_result(True)
+        response_future.then(set_cache)
         return await response_future
 
 
