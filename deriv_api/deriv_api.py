@@ -71,23 +71,23 @@ class DerivAPI(DerivAPICalls):
         self.connected = CustomFuture()
         self.subscription_manager: SubscriptionManager = SubscriptionManager(self)
         self.sanity_errors: Subject = Subject()
+        self.wait_data_flag = False
+        self.wait_data_task = CustomFuture().set_result(1)
         # If we have the storage look that one up
         self.cache = Cache(self.storage if self.storage else self, cache)
 
-        asyncio.create_task(self.__connect_and_start_watching_data())
+        self.create_and_watch_task = asyncio.create_task(self.__connect_and_start_watching_data())
 
     async def __connect_and_start_watching_data(self):
         await self.api_connect()
-        print("connect ok")
-        asyncio.create_task(self.__wait_data())
+        self.wait_data_flag = True
+        self.wait_data_task = asyncio.create_task(self.__wait_data())
         return
 
     async def __wait_data(self):
-        print("start wait data")
-        while self.connected.is_resolved():
+        while self.connected.is_resolved() and self.connected.result() and self.wait_data_flag:
             data = await self.wsconnection.recv()
             response = json.loads(data)
-            print(f"get resonse {response}")
             # TODO add self.events stream
 
             req_id = response.get('req_id', None)
@@ -159,7 +159,6 @@ class DerivAPI(DerivAPICalls):
             return CustomFuture.wrap(asyncio.create_task(self.wsconnection.send(json.dumps(request))))
         def error_cb(exception):
             pending.on_error(exception)
-            print("error_cb")
             return CustomFuture().set_result(1)
         self.connected.then(connected_cb).catch(error_cb)
         return pending
@@ -172,3 +171,13 @@ class DerivAPI(DerivAPICalls):
         self.shouldReconnect = False
         self.connected = CustomFuture.resolve(False)
         await self.wsconnection.close()
+
+    # TODO optimize create_and_watch_task and wait_data_task
+    # TODO rewrite by `async with`
+    # TODO cancel ok, so wait_data_flag is not used ?
+    async def clear(self):
+        print("clearing.....")
+        await self.create_and_watch_task
+        print("waiting.............")
+        self.wait_data_flag = False
+        self.wait_data_task.cancel()
