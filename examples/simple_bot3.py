@@ -10,8 +10,9 @@ app_id = 1089
 async def sample_calls():
     api = deriv_api.DerivAPI(app_id=app_id)
     source_tick_50: Observable  = await api.subscribe({'ticks': 'R_50'})
-    print(f"source tick50 is {id(source_tick_50)}")
     source_tick_50.subscribe(lambda data: print(f"get R50 {data}"))
+    source_tick_100: Observable  = await api.subscribe({'ticks': 'R_100'})
+    source_tick_100.subscribe(lambda data: print(f"get R100 {data}"))
     await asyncio.sleep(5)
     await api.clear()
 
