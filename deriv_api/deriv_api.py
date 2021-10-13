@@ -103,8 +103,24 @@ class DerivAPI(DerivAPICalls):
 
             # TODO expect_response_types
             request = response['echo_req']
-            # TODO process poc stream
-            # TODO process subscription
+
+            # When one of the child subscriptions of `proposal_open_contract` has an error in the response,
+            # it should be handled in the callback of consumer instead. Calling `error()` with parent subscription
+            # will mark the parent subscription as complete and all child subscriptions will be forgotten.
+
+            is_parent_subscription = request and request.get('proposal_open_contract') and not request.get('contract_id')
+            if response.get('error') and not is_parent_subscription:
+                # TODO check what will happen if error. will it be forgot ?
+                self.pending_requests[req_id].on_error(response)
+                continue
+
+            if self.pending_requests[req_id].is_stopped and response.get('subscription'):
+                # Source is already marked as completed. In this case we should
+                # send a forget request with the subscription id and ignore the response received.
+                subs_id = response['subscription']
+                await self.forget(subs_id);
+                continue
+
             self.pending_requests[req_id].on_next(response)
 
     def __set_apiURL(self, connection_argument):
@@ -186,6 +202,9 @@ class DerivAPI(DerivAPICalls):
     def parse_response(self, message):
         data = json.loads(message)
         return data
+
+    async def forget(self, subs_id):
+        return await self.subscription_manager.forget(subs_id)
 
     async def disconnect(self):
         self.shouldReconnect = False

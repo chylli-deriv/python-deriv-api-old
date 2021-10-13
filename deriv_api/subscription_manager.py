@@ -105,11 +105,11 @@ class SubscriptionManager:
         print(f"the source in crate_new_source is {id(source)}")
         return source
 
-    def forget(self, sub_id):
+    async def forget(self, sub_id):
         self.complete_subs_by_ids(sub_id)
-        return self.api.send({'forget': sub_id})
+        return await self.api.send({'forget': sub_id})
 
-    def forget_all(self, *types):
+    async def forget_all(self, *types):
         # To include subscriptions that were automatically unsubscribed
         # for example a proposal subscription is auto-unsubscribed after buy
 
@@ -117,7 +117,7 @@ class SubscriptionManager:
             for k in (self.subs_per_msg_type.get(t) or []):
                 self.complete_subs_by_key(k)
             self.subs_per_msg_type[t] = []
-        return self.api.send({'forget_all': list(types)})
+        return await self.api.send({'forget_all': list(types)})
 
     def complete_subs_by_ids(self, *sub_ids):
         for sub_id in sub_ids:

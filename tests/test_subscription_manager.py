@@ -23,7 +23,7 @@ class API:
         self.send_and_get_source_request[self.send_and_get_source_called] = request
         return self.subject
 
-    def send(self, request: dict):
+    async def send(self, request: dict):
         self.send_called = self.send_called + 1
         self.send_request[self.send_called] = request
         return request
@@ -66,7 +66,7 @@ async def test_subscribe():
     assert (source is source2), "same result"
     assert (source is subscription_manager.get_source({'proposal': 1})), 'source is in the cache'
     assert subscription_manager.source_exists({'proposal': 1}), "source in the cache"
-    forget_result = subscription_manager.forget(subs_id)
+    forget_result = await subscription_manager.forget(subs_id)
     assert api.send_called == 1
     assert forget_result == {'forget': subs_id}
     assert api.subject.is_disposed, "source is disposed"
@@ -99,14 +99,15 @@ async def test_subscribe():
     source2, emit = await asyncio.gather(subscription_manager.subscribe(request), api.emit())
     assert api.send_and_get_source_called == 0 , "send_and_get_source not called"
     assert source is source2, '"buy" source and "proposal_open_contract" source are same one and cached'
-    subscription_manager.forget(subs_id)
+    await subscription_manager.forget(subs_id)
     api.__init__()
     source2, emit = await asyncio.gather(subscription_manager.subscribe(request), api.emit())
     assert api.send_and_get_source_called == 1 , "cache is cleared so the new call will get"
     assert source2 is not source, "new source is not the old one"
 
-def test_forget_all():
+@pytest.mark.asyncio
+async def test_forget_all():
     api = API()
     subscription_manager = SubscriptionManager(api)
-    result = subscription_manager.forget_all("hello")
+    result = await subscription_manager.forget_all("hello")
     assert result == {'forget_all': ["hello"]}
