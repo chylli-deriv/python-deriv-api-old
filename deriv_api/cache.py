@@ -1,6 +1,9 @@
+from __future__ import annotations
 from deriv_api.deriv_api_calls import DerivAPICalls
 from deriv_api.errors import ConstructionError
 from deriv_api.utils import dict_to_cache_key
+from typing import Union
+from deriv_api.in_memory import InMemory
 
 
 class Cache(DerivAPICalls):
@@ -23,7 +26,7 @@ class Cache(DerivAPICalls):
     param {Object} storage A storage instance to use for caching
     """
 
-    def __init__(self, api: object, storage: object) -> None:
+    def __init__(self, api: Union[object, Cache], storage: Union[InMemory, Cache]) -> None:
         if not api:
             raise ConstructionError('Cache object needs an API to work')
 
