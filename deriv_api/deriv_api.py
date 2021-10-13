@@ -206,6 +206,9 @@ class DerivAPI(DerivAPICalls):
     async def forget(self, subs_id):
         return await self.subscription_manager.forget(subs_id)
 
+    async def forget_all(self, *types):
+        return await self.subscription_manager.forget_all(*types);
+
     async def disconnect(self):
         self.shouldReconnect = False
         self.connected = CustomFuture().resolve(False)

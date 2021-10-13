@@ -25,8 +25,9 @@ async def sample_calls():
     source_tick_100.subscribe(create_subs_cb('R_100'))
     await asyncio.sleep(5)
     print("now will forget")
-    await api.forget(last_data['R_50']['subscription']['id'])
-    await api.forget(last_data['R_100']['subscription']['id'])
+    #await api.forget(last_data['R_50']['subscription']['id'])
+    #await api.forget(last_data['R_100']['subscription']['id'])
+    await api.forget_all('ticks')
     await asyncio.sleep(5)
     await api.clear()
 
