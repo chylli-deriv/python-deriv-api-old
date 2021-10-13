@@ -7,11 +7,13 @@ import logging
 from deriv_api.errors import APIError, ConstructionError
 from deriv_api.utils import dict_to_cache_key, is_valid_url
 import re
+from typing import Union
 
 logging.basicConfig(
     format="%(asctime)s %(message)s",
     level=logging.ERROR
 )
+
 
 class DerivAPI(DerivAPICalls):
     """
@@ -32,9 +34,10 @@ class DerivAPI(DerivAPICalls):
     property {Cache} cache - Temporary cache default to {InMemory}
     property {Cache} storage - If specified, uses a more persistent cache (local storage, etc.)
     """
-    wsconnection:str = ''
-    storage = ''
-    def __init__(self, **options):
+    wsconnection: str = ''
+    storage: Union[InMemory, Cache, str] = ''
+
+    def __init__(self, **options: str) -> None:
         endpoint = options.get('endpoint', 'frontend.binaryws.com')
         lang = options.get('lang', 'EN')
         brand = options.get('brand', '')
@@ -62,13 +65,14 @@ class DerivAPI(DerivAPICalls):
         # If we have the storage look that one up
         self.cache = Cache(self.storage if self.storage else self, cache)
 
-    def __set_apiURL(self, connection_argument):
-        self.api_url = connection_argument.get('endpoint_url')+"/websockets/v3?app_id="+connection_argument.get('app_id')+"&l="+connection_argument.get('lang')+"&brand="+connection_argument.get('brand')
+    def __set_apiURL(self, connection_argument: dict) -> None:
+        self.api_url = connection_argument.get('endpoint_url') + "/websockets/v3?app_id=" + connection_argument.get(
+            'app_id') + "&l=" + connection_argument.get('lang') + "&brand=" + connection_argument.get('brand')
 
-    def __get_apiURL(self):
+    def __get_apiURL(self) -> str:
         return self.api_url
 
-    def get_url(self, original_endpoint):
+    def get_url(self, original_endpoint: str) -> Union[str, ConstructionError]:
         if not isinstance(original_endpoint, str):
             raise ConstructionError(f"Endpoint must be a string, passed: {type(original_endpoint)}")
 
@@ -76,24 +80,24 @@ class DerivAPI(DerivAPICalls):
         protocol = match[0] if match[0] == "ws://" else "wss://"
         endpoint = match[1]
 
-        url = protocol+endpoint
+        url = protocol + endpoint
         if not is_valid_url(url):
             raise ConstructionError(f'Invalid URL:{original_endpoint}')
 
         return url
 
-    async def api_connect(self):
+    async def api_connect(self) -> str:
         if not self.wsconnection and self.shouldReconnect:
             self.wsconnection = await websockets.connect(self.api_url)
 
         return self.wsconnection
 
-    async def send(self, message):
+    async def send(self, message: dict) -> dict:
         try:
             response = await self.send_receive(message)
         except (websockets.ConnectionClosed, websockets.ConnectionClosedError):
             if not self.shouldReconnect:
-               return APIError("API Connection Closed")
+                return APIError("API Connection Closed")
             else:
                 self.wsconnection = ''
                 await self.api_connect()
@@ -104,7 +108,7 @@ class DerivAPI(DerivAPICalls):
             self.storage.set(message, response)
         return response
 
-    async def send_receive(self, message):
+    async def send_receive(self, message: dict) -> dict:
         websocket = await self.api_connect()
         await websocket.send(json.dumps(message))
         async for response in websocket:
@@ -112,11 +116,11 @@ class DerivAPI(DerivAPICalls):
                 self.wsconnection = ''
                 await self.send_receive()
             return self.parse_response(response)
-   
-    def parse_response(self, message):
+
+    def parse_response(self, message: str) -> dict:
         data = json.loads(message)
         return data
 
-    async def disconnect(self):
+    async def disconnect(self) -> None:
         self.shouldReconnect = False
         await self.wsconnection.close()
