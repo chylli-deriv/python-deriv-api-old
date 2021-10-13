@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 from asyncio import Future, CancelledError, InvalidStateError
 from typing import Any, Optional, TypeVar, Union, Callable
 
@@ -7,7 +8,7 @@ _S = TypeVar("_S")
 
 
 class CustomFuture(Future):
-    def __init__(self, *, loop=None, label=None) -> None:
+    def __init__(self, *, loop: Optional[asyncio.AbstractEventLoop] = None, label: Optional[str] = None) -> None:
         super().__init__(loop=loop)
         if not label:
             label = f"Future {id(self)}"
@@ -45,7 +46,7 @@ class CustomFuture(Future):
         if self.done():
             raise InvalidStateError('invalid state')
 
-        def done_callback(f: Future) -> Callable[[_S], Any]:
+        def done_callback(f: Future) -> None:
             try:
                 result = f.result()
                 self.set_result(result)
@@ -57,10 +58,10 @@ class CustomFuture(Future):
         future.add_done_callback(done_callback)
         return self
 
-    def then(self, then_callback: Callable[[_S], Any], else_callback=None) -> CustomFuture:
+    def then(self, then_callback: Union[Callable[[_S], Any], None], else_callback: Union[Callable[[_S], Any], None] = None) -> CustomFuture:
         new_future = CustomFuture(loop=self.get_loop())
 
-        def done_callback(myself: CustomFuture) -> Callable[[_S], Any]:
+        def done_callback(myself: CustomFuture) -> None:
             f: Optional[CustomFuture] = None
             if myself.is_cancelled():
                 new_future.cancel('Upstream future cancelled')
@@ -74,7 +75,7 @@ class CustomFuture(Future):
             if f is None:
                 new_future.cascade(self)
 
-            def inside_callback(internal_future: CustomFuture) -> Callable[[_S], Any] :
+            def inside_callback(internal_future: CustomFuture) -> None:
                 new_future.cascade(internal_future)
 
             f.add_done_callback(inside_callback)
@@ -82,5 +83,5 @@ class CustomFuture(Future):
         self.add_done_callback(done_callback)
         return new_future
 
-    def catch(self, else_callback: Callable[[_S], Any]):
+    def catch(self, else_callback: Callable[[_S], Any]) -> CustomFuture:
         return self.then(None, else_callback)

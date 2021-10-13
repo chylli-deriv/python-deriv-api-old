@@ -1,6 +1,6 @@
 def error_factory(type: str) -> object:
     class GenericError(Exception):
-        def __init__(self, message:str):
+        def __init__(self, message: str):
             super().__init__(message)
             self.type = type
             self.message = message
@@ -10,8 +10,10 @@ def error_factory(type: str) -> object:
 
     return GenericError
 
+
 class APIError(error_factory('APIError')):
     pass
+
 
 class ConstructionError(error_factory('ConstructionError')):
     pass

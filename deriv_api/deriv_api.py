@@ -34,7 +34,7 @@ class DerivAPI(DerivAPICalls):
     property {Cache} cache - Temporary cache default to {InMemory}
     property {Cache} storage - If specified, uses a more persistent cache (local storage, etc.)
     """
-    wsconnection: str = ''
+    wsconnection: Union[websockets.WebSocketClientProtocol, None] = None
     storage: Union[InMemory, Cache, str] = ''
 
     def __init__(self, **options: str) -> None:
@@ -86,7 +86,7 @@ class DerivAPI(DerivAPICalls):
 
         return url
 
-    async def api_connect(self) -> str:
+    async def api_connect(self) -> websockets.WebSocketClientProtocol:
         if not self.wsconnection and self.shouldReconnect:
             self.wsconnection = await websockets.connect(self.api_url)
 
@@ -105,7 +105,7 @@ class DerivAPI(DerivAPICalls):
 
         await self.cache.set(message, response)
         if self.storage:
-            self.storage.set(message, response)
+            await self.storage.set(message, response)
         return response
 
     async def send_receive(self, message: dict) -> dict:
@@ -114,7 +114,7 @@ class DerivAPI(DerivAPICalls):
         async for response in websocket:
             if response is None:
                 self.wsconnection = ''
-                await self.send_receive()
+                await self.send_receive(message)
             return self.parse_response(response)
 
     def parse_response(self, message: str) -> dict:

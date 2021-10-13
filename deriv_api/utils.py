@@ -10,6 +10,8 @@ dict_to_cache_key(obj)
 is_valid_url(url)
     check the given url as a valid ws or wss url
 """
+
+
 def dict_to_cache_key(obj: dict) -> bytes:
     """convert the dictionary object to Pickled representation of object as bytes
 
