@@ -17,7 +17,7 @@ class API:
         self.send_and_get_source_called = 0
         self.send_called = 0
 
-    async def send_and_get_source(self, request: dict) -> Subject:
+    def send_and_get_source(self, request: dict) -> Subject:
         self.subject = Subject()
         self.send_and_get_source_called = self.send_and_get_source_called + 1
         self.send_and_get_source_request[self.send_and_get_source_called] = request
