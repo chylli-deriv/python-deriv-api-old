@@ -1,7 +1,6 @@
 from deriv_api.deriv_api_calls import DerivAPICalls
 from deriv_api.errors import ConstructionError
 from deriv_api.utils import dict_to_cache_key
-from deriv_api import deriv_api
 
 
 class Cache(DerivAPICalls):
@@ -24,7 +23,7 @@ class Cache(DerivAPICalls):
     param {Object} storage A storage instance to use for caching
     """
 
-    def __init__(self, api: deriv_api.DerivAPI, storage: object) -> None:
+    def __init__(self, api: object, storage: object) -> None:
         if not api:
             raise ConstructionError('Cache object needs an API to work')
 
