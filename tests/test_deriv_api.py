@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 import pytest_mock
 from deriv_api import deriv_api
@@ -49,3 +51,17 @@ def get_deriv_api(mocker):
     mocker.patch('deriv_api.deriv_api.DerivAPI.api_connect', return_value=CustomFuture().set_result(1))
     deriv_api_obj = deriv_api.DerivAPI(app_id=1234, endpoint='localhost')
     return deriv_api_obj
+
+@pytest.mark.asyncio
+async def test_transform_none_to_future():
+    loop = asyncio.get_event_loop()
+    f = loop.create_future()
+    trans_f = deriv_api.transform_none_to_future(f)
+    f.set_result(True)
+    await asyncio.sleep(0.01)
+    assert trans_f.is_resolved()
+    f = loop.create_future()
+    trans_f = deriv_api.transform_none_to_future(f)
+    f.set_result(None)
+    await asyncio.sleep(0.01)
+    assert trans_f.is_pending()

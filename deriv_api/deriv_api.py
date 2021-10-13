@@ -218,8 +218,15 @@ class DerivAPI(DerivAPICalls):
     # TODO rewrite by `async with`
     # TODO cancel ok, so wait_data_flag is not used ?
     async def clear(self):
-        print("clearing.....")
         await self.create_and_watch_task
-        print("waiting.............")
         self.wait_data_flag = False
         self.wait_data_task.cancel()
+
+def transform_none_to_future(future):
+    def then_cb(result):
+        print("in then_cb")
+        new_future = CustomFuture()
+        if result is None:
+            return CustomFuture()
+        return new_future.set_result(result)
+    return CustomFuture.wrap(future).then(then_cb)
