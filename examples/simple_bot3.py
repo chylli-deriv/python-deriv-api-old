@@ -9,10 +9,24 @@ app_id = 1089
 
 async def sample_calls():
     api = deriv_api.DerivAPI(app_id=app_id)
+    last_data = {}
     source_tick_50: Observable  = await api.subscribe({'ticks': 'R_50'})
-    source_tick_50.subscribe(lambda data: print(f"get R50 {data}"))
+    def create_subs_cb(symbol):
+        count = 1
+        def cb(data):
+            nonlocal count
+            count = count + 1
+            last_data[symbol] = data
+            print(f"get symbol {symbol} {count}")
+        return cb
+
+    source_tick_50.subscribe(create_subs_cb('R_50'))
     source_tick_100: Observable  = await api.subscribe({'ticks': 'R_100'})
-    source_tick_100.subscribe(lambda data: print(f"get R100 {data}"))
+    source_tick_100.subscribe(create_subs_cb('R_100'))
+    await asyncio.sleep(5)
+    print("now will forget")
+    await api.forget(last_data['R_50']['subscription']['id'])
+    await api.forget(last_data['R_100']['subscription']['id'])
     await asyncio.sleep(5)
     await api.clear()
 
