@@ -105,7 +105,6 @@ class DerivAPI(DerivAPICalls):
             if not req_id or req_id not in self.pending_requests:
                 self.sanity_errors.on_next(APIError("Extra response"))
                 continue
-
             expect_response: Future = self.expect_response_types.get(response['msg_type'])
             if expect_response and not expect_response.done():
                 expect_response.set_result(response)
@@ -238,7 +237,7 @@ class DerivAPI(DerivAPICalls):
                     return CustomFuture().set_result(val)
 
                 self.expect_response_types[msg_type] = transform_none_to_future(
-                    CustomFuture.wrap(self.cache.get_by_msg_type(type)).then(then_cb)
+                    CustomFuture.wrap(asyncio.create_task(self.cache.get_by_msg_type(msg_type))).then(then_cb)
                 )
 
         # expect on a single response returns a single response, not a list
