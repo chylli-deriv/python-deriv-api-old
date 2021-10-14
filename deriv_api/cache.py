@@ -1,6 +1,10 @@
+from __future__ import annotations
 from deriv_api.deriv_api_calls import DerivAPICalls
 from deriv_api.errors import ConstructionError
 from deriv_api.utils import dict_to_cache_key
+from typing import Union
+from deriv_api.in_memory import InMemory
+
 
 class Cache(DerivAPICalls):
     """
@@ -22,7 +26,7 @@ class Cache(DerivAPICalls):
     param {Object} storage A storage instance to use for caching
     """
 
-    def __init__(self, api, storage):
+    def __init__(self, api: Union[object, Cache], storage: Union[InMemory, Cache]) -> None:
         if not api:
             raise ConstructionError('Cache object needs an API to work')
 
@@ -30,7 +34,7 @@ class Cache(DerivAPICalls):
         self.api = api
         self.storage = storage
 
-    async def send(self, request):
+    async def send(self, request: dict) -> dict:
         if await self.has(request):
             return await self.get(request)
 
@@ -38,19 +42,18 @@ class Cache(DerivAPICalls):
         await self.set(request, response)
         return response
 
-    async def has(self, request):
+    async def has(self, request: dict) -> bool:
         """Redirected to the method defined by the storage"""
         return self.storage.has(dict_to_cache_key(request))
 
-    async def get(self, request):
+    async def get(self, request: dict) -> dict:
         """Redirected to the method defined by the storage"""
         return self.storage.get(dict_to_cache_key(request))
 
-    async def get_by_msg_type(self, msg_type):
+    async def get_by_msg_type(self, msg_type: str) -> dict:
         """Redirected to the method defined by the storage"""
         return self.storage.get_by_msg_type(msg_type)
 
-    async def set(self, request, response):
+    async def set(self, request, response: dict) -> None:
         """Redirected to the method defined by the storage"""
         return self.storage.set(dict_to_cache_key(request), response)
-

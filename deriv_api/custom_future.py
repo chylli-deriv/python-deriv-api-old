@@ -1,10 +1,15 @@
 from __future__ import annotations
+import asyncio
 from asyncio import Future, CancelledError, InvalidStateError
-from typing import Optional
+from typing import Any, Optional, TypeVar, Union, Callable
+
+_T = TypeVar("_T")
+_S = TypeVar("_S")
+
 
 class CustomFuture(Future):
-    def __init__(self, *, loop=None, label=None):
-        super().__init__(loop = loop)
+    def __init__(self, *, loop: Optional[asyncio.AbstractEventLoop] = None, label: Optional[str] = None) -> None:
+        super().__init__(loop=loop)
         if not label:
             label = f"Future {id(self)}"
         self.label = label
@@ -14,14 +19,14 @@ class CustomFuture(Future):
         if isinstance(future, cls):
             return future
 
-        custom_future = cls(loop = future.get_loop())
+        custom_future = cls(loop=future.get_loop())
         custom_future.cascade(future)
         return custom_future
 
-    def resolve(self, *args):
+    def resolve(self, *args: _T) -> None:
         return super().set_result(*args)
 
-    def reject(self, *args):
+    def reject(self, *args: Union[type, BaseException]) -> None:
         return super().set_exception(*args)
 
     def is_pending(self) -> bool:
@@ -41,7 +46,7 @@ class CustomFuture(Future):
         if self.done():
             raise InvalidStateError('invalid state')
 
-        def done_callback(f: Future):
+        def done_callback(f: Future) -> None:
             try:
                 result = f.result()
                 self.set_result(result)
@@ -53,23 +58,24 @@ class CustomFuture(Future):
         future.add_done_callback(done_callback)
         return self
 
-    def then(self, then_callback, else_callback=None) -> CustomFuture:
+    def then(self, then_callback: Union[Callable[[_S], Any], None], else_callback: Union[Callable[[_S], Any], None] = None) -> CustomFuture:
         new_future = CustomFuture(loop=self.get_loop())
-        def done_callback(myself: CustomFuture):
+
+        def done_callback(myself: CustomFuture) -> None:
             f: Optional[CustomFuture] = None
             if myself.is_cancelled():
                 new_future.cancel('Upstream future cancelled')
                 return
 
             if myself.is_rejected() and else_callback:
-                    f = else_callback(myself.exception())
+                f = else_callback(myself.exception())
             elif myself.is_resolved() and then_callback:
                 f = then_callback(myself.result())
 
             if f is None:
                 new_future.cascade(self)
 
-            def inside_callback(internal_future: CustomFuture):
+            def inside_callback(internal_future: CustomFuture) -> None:
                 new_future.cascade(internal_future)
 
             f.add_done_callback(inside_callback)
@@ -77,5 +83,5 @@ class CustomFuture(Future):
         self.add_done_callback(done_callback)
         return new_future
 
-    def catch(self, else_callback):
+    def catch(self, else_callback: Callable[[_S], Any]) -> CustomFuture:
         return self.then(None, else_callback)
