@@ -226,6 +226,7 @@ class DerivAPI(DerivAPICalls):
         await self.wsconnection.close()
 
     # TODO remove customfuture, only use async and await ?
+    # Or, don't export custom future in the public interfaces ?
     def expect_response(self, *msg_types):
         for msg_type in msg_types:
             if msg_type not in self.expect_response_types:

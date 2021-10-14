@@ -37,7 +37,7 @@ async def test_wrap():
     assert f2.done()
     assert f2.is_rejected()
 
-    # test cancel
+    # test upstream cancel
     f1 = asyncio.Future()
     f2 = CustomFuture.wrap(f1)
     f1.cancel("hello")
@@ -45,6 +45,16 @@ async def test_wrap():
         await f2
     assert f2.done()
     assert f2.is_cancelled()
+
+    # test downstream cancel
+    f1 = asyncio.Future()
+    f2 = CustomFuture.wrap(f1)
+    f2.cancel("hello")
+    with pytest.raises(CancelledError, match='hello'):
+        await f1
+    assert f1.done()
+    assert f1.cancelled()
+
 
 @pytest.mark.asyncio
 async def test_future_then():
@@ -136,4 +146,4 @@ async def test_future_then():
 
     f2 = f1.then(None, else_callback)
     f1.set_result('f1 ok')
-    assert (await f2) == 'f1 ok' , 'If no suitable callback, then clone the result'
+    assert (await f2) == 'f1 ok', 'If no suitable callback, then clone the result'
