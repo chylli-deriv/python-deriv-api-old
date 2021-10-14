@@ -24,21 +24,6 @@ async def test_deriv_api(mocker):
     await deriv_api_obj.clear()
 
 @pytest.mark.asyncio
-async def test_parse_response(mocker):
-    mocker.patch('deriv_api.deriv_api.DerivAPI.api_connect', return_value='')
-    deriv_api_obj = deriv_api.DerivAPI(app_id=1234, endpoint='localhost')
-
-    message = '{"echo_req": {"ping": 1}, "msg_type": "ping", "ping": "pong"}'
-    data = deriv_api_obj.parse_response(message)
-    assert data['ping'] == 'pong'
-    assert data['msg_type'] == 'ping'
-
-    message='{"echo_req": {"active_symbols": "brief","product_type1": "basic"}, "error": {"code": "InputValidationFailed","details": {},"message": "Input validation failed: Properties not allowed: product_type1."},"msg_type": "active_symbols"}'
-    data = deriv_api_obj.parse_response(message)
-    assert data['error']['code'] == 'InputValidationFailed'
-    await deriv_api_obj.clear()
-
-@pytest.mark.asyncio
 async def test_get_url(mocker):
     deriv_api_obj = get_deriv_api(mocker)
     assert deriv_api_obj.get_url("localhost") == "wss://localhost"

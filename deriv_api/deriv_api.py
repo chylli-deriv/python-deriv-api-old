@@ -1,20 +1,22 @@
-from deriv_api.cache import Cache
-from deriv_api.deriv_api_calls import DerivAPICalls
-from deriv_api.in_memory import InMemory
-from deriv_api.subscription_manager import SubscriptionManager
-import websockets
-from websockets.legacy.client import WebSocketClientProtocol
+import asyncio
 import json
 import logging
-from deriv_api.errors import APIError, ConstructionError
-from deriv_api.utils import dict_to_cache_key, is_valid_url
 import re
-from rx.subject import Subject
-from deriv_api.custom_future import CustomFuture
-from typing import Optional, Dict
-import asyncio
 from asyncio import Future
+from typing import Dict, Optional, Union
+
+import websockets
 from rx import operators as op
+from rx.subject import Subject
+from websockets.legacy.client import WebSocketClientProtocol
+
+from deriv_api.cache import Cache
+from deriv_api.custom_future import CustomFuture
+from deriv_api.deriv_api_calls import DerivAPICalls
+from deriv_api.errors import APIError, ConstructionError
+from deriv_api.in_memory import InMemory
+from deriv_api.subscription_manager import SubscriptionManager
+from deriv_api.utils import dict_to_cache_key, is_valid_url
 
 # TODO in the doc , list this ExpectResponse is missed
 # middleware is missed
@@ -45,9 +47,9 @@ class DerivAPI(DerivAPICalls):
     property {Cache} cache - Temporary cache default to {InMemory}
     property {Cache} storage - If specified, uses a more persistent cache (local storage, etc.)
     """
-    storage = ''
+    storage:  None
 
-    def __init__(self, **options):
+    def __init__(self, **options: str) -> None:
         endpoint = options.get('endpoint', 'frontend.binaryws.com')
         lang = options.get('lang', 'EN')
         brand = options.get('brand', '')
@@ -70,6 +72,7 @@ class DerivAPI(DerivAPICalls):
             self.__set_apiURL(connection_argument)
             self.shouldReconnect = True
 
+        self.storage: Union[InMemory, Cache, None] = None
         if storage:
             self.storage = Cache(self, storage)
 
@@ -131,14 +134,14 @@ class DerivAPI(DerivAPICalls):
 
             self.pending_requests[req_id].on_next(response)
 
-    def __set_apiURL(self, connection_argument):
+    def __set_apiURL(self, connection_argument: dict) -> None:
         self.api_url = connection_argument.get('endpoint_url') + "/websockets/v3?app_id=" + connection_argument.get(
             'app_id') + "&l=" + connection_argument.get('lang') + "&brand=" + connection_argument.get('brand')
 
-    def __get_apiURL(self):
+    def __get_apiURL(self) -> str:
         return self.api_url
 
-    def get_url(self, original_endpoint):
+    def get_url(self, original_endpoint: str) -> Union[str, ConstructionError]:
         if not isinstance(original_endpoint, str):
             raise ConstructionError(f"Endpoint must be a string, passed: {type(original_endpoint)}")
 
@@ -152,7 +155,7 @@ class DerivAPI(DerivAPICalls):
 
         return url
 
-    async def api_connect(self):
+    async def api_connect(self) -> websockets.WebSocketClientProtocol:
         if not self.wsconnection and self.shouldReconnect:
             self.wsconnection = await websockets.connect(self.api_url)
         # TODO check: don't replace old self.connected, because it will affect the `then` clause
@@ -160,8 +163,7 @@ class DerivAPI(DerivAPICalls):
         print(f"in api_connect {self.connected.result()}")
         return self.wsconnection
 
-    async def send(self, request):
-        print(f"sending {request}")
+    async def send(self, request: dict) -> dict:
         response_future: CustomFuture = CustomFuture.wrap(
             self.send_and_get_source(request).pipe(op.first(), op.to_future()))
 
@@ -212,17 +214,13 @@ class DerivAPI(DerivAPICalls):
     async def subscribe(self, request):
         return await self.subscription_manager.subscribe(request)
 
-    def parse_response(self, message):
-        data = json.loads(message)
-        return data
-
     async def forget(self, subs_id):
         return await self.subscription_manager.forget(subs_id)
 
     async def forget_all(self, *types):
         return await self.subscription_manager.forget_all(*types);
 
-    async def disconnect(self):
+    async def disconnect(self) -> None:
         self.shouldReconnect = False
         self.connected = CustomFuture().resolve(False)
         await self.wsconnection.close()
