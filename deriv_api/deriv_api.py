@@ -1,7 +1,7 @@
 from deriv_api.cache import Cache
 from deriv_api.deriv_api_calls import DerivAPICalls
 from deriv_api.in_memory import InMemory
-from deriv_api.subscription_manager import  SubscriptionManager
+from deriv_api.subscription_manager import SubscriptionManager
 import websockets
 from websockets.legacy.client import WebSocketClientProtocol
 import json
@@ -13,6 +13,7 @@ from rx.subject import Subject
 from deriv_api.custom_future import CustomFuture
 from typing import Optional, Dict
 import asyncio
+from asyncio import Future
 from rx import operators as op
 
 # TODO in the doc , list this ExpectResponse is missed
@@ -23,6 +24,7 @@ logging.basicConfig(
     format="%(asctime)s %(message)s",
     level=logging.ERROR
 )
+
 
 class DerivAPI(DerivAPICalls):
     """
@@ -44,6 +46,7 @@ class DerivAPI(DerivAPICalls):
     property {Cache} storage - If specified, uses a more persistent cache (local storage, etc.)
     """
     storage = ''
+
     def __init__(self, **options):
         endpoint = options.get('endpoint', 'frontend.binaryws.com')
         lang = options.get('lang', 'EN')
@@ -77,6 +80,7 @@ class DerivAPI(DerivAPICalls):
         self.sanity_errors: Subject = Subject()
         self.subscription_manager = SubscriptionManager(self)
         self.wait_data_flag = False
+        self.expect_response_types = {}
         self.wait_data_task = CustomFuture().set_result(1)
         # If we have the storage look that one up
         self.cache = Cache(self.storage if self.storage else self, cache)
@@ -96,19 +100,24 @@ class DerivAPI(DerivAPICalls):
             response = json.loads(data)
             # TODO add self.events stream
 
+            # TODO onopen onclose, can be set by await connection
             req_id = response.get('req_id', None)
             if not req_id or req_id not in self.pending_requests:
                 self.sanity_errors.on_next(APIError("Extra response"))
                 continue
 
-            # TODO expect_response_types
+            expect_response: Future = self.expect_response_types.get(response['msg_type'])
+            if expect_response and not expect_response.done():
+                expect_response.set_result(response)
+
             request = response['echo_req']
 
             # When one of the child subscriptions of `proposal_open_contract` has an error in the response,
             # it should be handled in the callback of consumer instead. Calling `error()` with parent subscription
             # will mark the parent subscription as complete and all child subscriptions will be forgotten.
 
-            is_parent_subscription = request and request.get('proposal_open_contract') and not request.get('contract_id')
+            is_parent_subscription = request and request.get('proposal_open_contract') and not request.get(
+                'contract_id')
             if response.get('error') and not is_parent_subscription:
                 # TODO check what will happen if error. will it be forgot ?
                 self.pending_requests[req_id].on_error(response)
@@ -124,7 +133,8 @@ class DerivAPI(DerivAPICalls):
             self.pending_requests[req_id].on_next(response)
 
     def __set_apiURL(self, connection_argument):
-        self.api_url = connection_argument.get('endpoint_url')+"/websockets/v3?app_id="+connection_argument.get('app_id')+"&l="+connection_argument.get('lang')+"&brand="+connection_argument.get('brand')
+        self.api_url = connection_argument.get('endpoint_url') + "/websockets/v3?app_id=" + connection_argument.get(
+            'app_id') + "&l=" + connection_argument.get('lang') + "&brand=" + connection_argument.get('brand')
 
     def __get_apiURL(self):
         return self.api_url
@@ -137,7 +147,7 @@ class DerivAPI(DerivAPICalls):
         protocol = match[0] if match[0] == "ws://" else "wss://"
         endpoint = match[1]
 
-        url = protocol+endpoint
+        url = protocol + endpoint
         if not is_valid_url(url):
             raise ConstructionError(f'Invalid URL:{original_endpoint}')
 
@@ -153,23 +163,24 @@ class DerivAPI(DerivAPICalls):
 
     async def send(self, request):
         print(f"sending {request}")
-        response_future: CustomFuture = CustomFuture.wrap(self.send_and_get_source(request).pipe(op.first(), op.to_future()))
+        response_future: CustomFuture = CustomFuture.wrap(
+            self.send_and_get_source(request).pipe(op.first(), op.to_future()))
+
         def set_cache(response):
             self.cache.set(request, response)
             if self.storage:
                 self.storage.set(request, response)
             return CustomFuture().set_result(True)
+
         response_future.then(set_cache)
         return await response_future
-
 
     async def subscribe(self, request):
         return await self.subscription_manager.subscribe(request)
 
     # TODO fix this one
-    #def is_connection_closed(self):
+    # def is_connection_closed(self):
     #    return self.connection.ready_state == 2 or self.connection.ready_state == 3
-
 
     # TODO
     # 1 add all funcs taht include subscription_manager
@@ -185,12 +196,15 @@ class DerivAPI(DerivAPICalls):
             request['req_id'] = self.req_id
         print(f"req id {self.req_id}")
         self.pending_requests[request['req_id']] = pending
+
         def connected_cb(result):
             print(f"in connected cb")
             return CustomFuture.wrap(asyncio.create_task(self.wsconnection.send(json.dumps(request))))
+
         def error_cb(exception):
             pending.on_error(exception)
             return CustomFuture().set_result(1)
+
         print(f"connected in line 178 {self.connected.is_resolved()}")
         self.connected.then(connected_cb).then(lambda d: print("sending ? .....")).catch(error_cb)
         print(f"in line 180")
@@ -214,6 +228,36 @@ class DerivAPI(DerivAPICalls):
         self.connected = CustomFuture().resolve(False)
         await self.wsconnection.close()
 
+    # TODO remove customfuture, only use async and await ?
+    def expect_response(self, *msg_types):
+        for msg_type in msg_types:
+            if msg_type not in self.expect_response_types:
+                def then_cb(val):
+                    if not val and self.storage:
+                        return CustomFuture().set_result(self.storage.get_by_msg_type(msg_type))
+                    return CustomFuture().set_result(val)
+
+                self.expect_response_types[msg_type] = transform_none_to_future(
+                    CustomFuture.wrap(self.cache.get_by_msg_type(type)).then(then_cb)
+                )
+
+        # expect on a single response returns a single response, not a list
+        if len(msg_types) == 1:
+            return self.expect_response_types[msg_types[0]]
+
+        return asyncio.gather(map(lambda t: self.expect_response_types[t], msg_types))
+
+    def delete_from_expect_response(self, request):
+        response_type = None
+        for k in self.expect_response_types.keys():
+            if k in request:
+                response_type = k
+                break
+
+        if response_type and self.expect_response_types[response_type] \
+                and self.expect_response_types[response_type].done():
+            del self.expect_response_types[response_type]
+
     # TODO optimize create_and_watch_task and wait_data_task
     # TODO rewrite by `async with`
     # TODO cancel ok, so wait_data_flag is not used ?
@@ -222,6 +266,7 @@ class DerivAPI(DerivAPICalls):
         self.wait_data_flag = False
         self.wait_data_task.cancel()
 
+
 def transform_none_to_future(future):
     def then_cb(result):
         print("in then_cb")
@@ -229,4 +274,5 @@ def transform_none_to_future(future):
         if result is None:
             return CustomFuture()
         return new_future.set_result(result)
+
     return CustomFuture.wrap(future).then(then_cb)

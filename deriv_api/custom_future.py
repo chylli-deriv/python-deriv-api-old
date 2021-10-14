@@ -16,8 +16,16 @@ class CustomFuture(Future):
 
         custom_future = cls(loop = future.get_loop())
         custom_future.cascade(future)
+
+        #TODO test
+        def cancel_cb(cb_future: Future):
+            if cb_future.cancelled() and not future.done():
+                future.cancel('Cancel')
+
+        custom_future.add_done_callback(cancel_cb)
         return custom_future
 
+    # TODO add on_reslove on reject on cancel ,and refactor then with these
     def resolve(self, *args):
         super().set_result(*args)
         return self
