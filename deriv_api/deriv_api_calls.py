@@ -14,11 +14,22 @@ class DerivAPICalls:
 
     async def account_closure(self, args=None): 
         """
-        param args {Dict}
-        param args.account_closure {Number}: Must be `1`
-        param args.passthrough {Any}: [Optional] Used to pass data through the websocket, which may be retrieved via the `echo_req` output field.
-        param args.reason {String}: Reason for closing off accounts.
-        param args.req_id {Number}: [Optional] Used to map request to response.
+        Args:
+            args (dict): 
+        Parameters
+        ----------
+            args.account_closure : Number
+                 Must be 1
+
+            args.passthrough : Any [Optional]
+                 Used to pass data through the websocket, which may be retrieved via the echo_req output field.
+
+            args.reason : String
+                 Reason for closing off accounts.
+
+            args.req_id : Number [Optional]
+                 Used to map request to response.
+
         """
 
         if args is None:
@@ -6029,6 +6040,10 @@ class DerivAPICalls:
             raise ValueError(error)
         return await self.send(parsed_args)
 
+__pdoc__ = {
+    'parse_args' : False,
+    'validate_args' : False
+}
 
 def parse_args(all_args):
     """
