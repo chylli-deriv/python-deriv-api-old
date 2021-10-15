@@ -5,6 +5,37 @@ import pytest_mock
 from deriv_api import deriv_api
 from deriv_api.errors import APIError, ConstructionError
 from deriv_api.custom_future import CustomFuture
+from rx.subject import Subject
+import rx.operators as op
+
+class MockedWs:
+    def __init__(self):
+        self.data = []
+        self.called = {'send': 0, 'recv' : 0}
+        self.slept_at = 0
+        self.queue = Subject()
+        async def build_queue():
+            while 1:
+                await asyncio.sleep(0.01)
+                # make queue
+                data = self.data
+                self.data = []
+                for d in data:
+                    await asyncio.sleep(0.01)
+                    self.queue.on_next(d)
+                    # if subscription, then we keep it
+                    if d.get('subscription'):
+                        self.data.append(d)
+        self.task_build_queue = asyncio.create_task(build_queue())
+    async def send(self, request):
+        self.called['send'] += 1
+
+    async def recv(self):
+        self.called['recv'] += 1
+        return await self.queue.pipe(op.first(),op.to_future())
+
+    def clear(self):
+        self.task_build_queue.cancel('end')
 
 def test_connect_parameter():
     with pytest.raises(ConstructionError, match=r"An app_id is required to connect to the API"):
@@ -50,3 +81,19 @@ async def test_transform_none_to_future():
     f.set_result(None)
     await asyncio.sleep(0.01)
     assert trans_f.is_pending()
+
+@pytest.mark.asyncio
+async def test_mocked_ws():
+    wsconnection = MockedWs()
+    data1 = {"subscription": {"hello": "world"}}
+    data2 = {"one": 1}
+    wsconnection.data.append(data1)
+    wsconnection.data.append(data2)
+    await wsconnection.send("hello")
+    assert await wsconnection.recv() == data1, "we can get first data"
+    assert await wsconnection.recv() == data2, "we can get second data"
+    assert await wsconnection.recv() == data1, "we can still get first data becaues it is a subscription"
+    assert await wsconnection.recv() == data1, "we will not get second data because it is not a subscription"
+    assert wsconnection.called['send'] == 1
+    assert wsconnection.called['recv'] == 4
+    wsconnection.clear()
