@@ -7,6 +7,7 @@ from deriv_api.errors import APIError, ConstructionError
 from deriv_api.custom_future import CustomFuture
 from rx.subject import Subject
 import rx.operators as op
+import pickle
 
 class MockedWs:
     def __init__(self):
@@ -14,6 +15,7 @@ class MockedWs:
         self.called = {'send': 0, 'recv' : 0}
         self.slept_at = 0
         self.queue = Subject()
+        self.req_res_map = {}
         async def build_queue():
             while 1:
                 await asyncio.sleep(0.01)
@@ -29,10 +31,19 @@ class MockedWs:
         self.task_build_queue = asyncio.create_task(build_queue())
     async def send(self, request):
         self.called['send'] += 1
+        key = pickle.dumps(request)
+        response = self.req_res_map.get(key)
+        if response:
+            self.data.append(response)
+            self.req_res_map.pop(key)
 
     async def recv(self):
         self.called['recv'] += 1
         return await self.queue.pipe(op.first(),op.to_future())
+
+    def add_data(self,response):
+        key = pickle.dumps(response['echo_req'])
+        self.req_res_map[key] = response
 
     def clear(self):
         self.task_build_queue.cancel('end')
@@ -85,15 +96,17 @@ async def test_transform_none_to_future():
 @pytest.mark.asyncio
 async def test_mocked_ws():
     wsconnection = MockedWs()
-    data1 = {"subscription": {"hello": "world"}}
-    data2 = {"one": 1}
-    wsconnection.data.append(data1)
-    wsconnection.data.append(data2)
-    await wsconnection.send("hello")
+    data1 = {"echo_req":{"ticks" : 'R_50'} ,"msg_type": "ticks", "subscription": {"id": "world"}}
+    data2 = {"echo_req":{"ping": 1},"msg_type": "ping", "pong": 1}
+    req_res = []
+    wsconnection.add_data(data1)
+    wsconnection.add_data(data2)
+    await wsconnection.send(data1["echo_req"])
+    await wsconnection.send(data2["echo_req"])
     assert await wsconnection.recv() == data1, "we can get first data"
     assert await wsconnection.recv() == data2, "we can get second data"
     assert await wsconnection.recv() == data1, "we can still get first data becaues it is a subscription"
     assert await wsconnection.recv() == data1, "we will not get second data because it is not a subscription"
-    assert wsconnection.called['send'] == 1
+    assert wsconnection.called['send'] == 2
     assert wsconnection.called['recv'] == 4
     wsconnection.clear()
