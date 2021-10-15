@@ -14,26 +14,55 @@ logging.basicConfig(
     level=logging.ERROR
 )
 
+__pdoc__ = {
+    'deriv_api.deriv_api.DerivAPI.send': False,
+    'deriv_api.deriv_api.DerivAPI.api_connect': False,
+    'deriv_api.deriv_api.DerivAPI.get_url': False,
+    'deriv_api.deriv_api.DerivAPI.parse_response': False,
+    'deriv_api.deriv_api.DerivAPI.send_receive': False,
+    'deriv_api.deriv_api.DerivAPI.wsconnection' : False,
+    'deriv_api.deriv_api.DerivAPI.storage' : False   
+}
 
 class DerivAPI(DerivAPICalls):
     """
     The minimum functionality provided by DerivAPI, provides direct calls to the API.
     `api.cache` is available if you want to use the cached data
 
-    example
-    apiFromEndpoint = deriv_api.DerivAPI({ endpoint: 'ws.binaryws.com', app_id: 1234 });
+    Examples
+    --------
+    - Pass the arguments needed to create a connection:
+    >>> api = deriv_api.DerivAPI({ endpoint: 'ws://...', app_id: 1234 });
 
-    param {Object}     options
-    param {WebSocket}  options.connection - A ready to use connection
-    param {String}     options.endpoint   - API server to connect to
-    param {Number}     options.app_id     - Application ID of the API user
-    param {String}     options.lang       - Language of the API communication
-    param {String}     options.brand      - Brand name
-    param {Object}     options.middleware - A middleware to call on certain API actions
+    - create and use a previously opened connection:
+    >>> connection = await websockets.connect('ws://...')
+    >>> api = deriv_api.DerivAPI(connection=connection)
 
-    property {Cache} cache - Temporary cache default to {InMemory}
-    property {Cache} storage - If specified, uses a more persistent cache (local storage, etc.)
+    Args:
+        options (dict): 
+
+    Parameters
+    ----------
+        options.connection : websockets.WebSocketClientProtocol
+            A ready to use connection
+        options.endpoint : String
+            API server to connect to
+        options.app_id : String
+            Application ID of the API user
+        options.lang : String
+            Language of the API communication
+        options.brand : String
+            Brand name
+        options.middleware : String
+            A middleware to call on certain API actions
+
+    Properties
+    cache : Cache
+        Temporary cache default to {InMemory}
+    storage : Cache
+        If specified, uses a more persistent cache (local storage, etc.)
     """
+
     wsconnection: Union[websockets.WebSocketClientProtocol, None] = None
     storage: Union[InMemory, Cache, str] = ''
 
@@ -122,5 +151,7 @@ class DerivAPI(DerivAPICalls):
         return data
 
     async def disconnect(self) -> None:
+        """ To disconnect the websocket connection
+        """
         self.shouldReconnect = False
         await self.wsconnection.close()
