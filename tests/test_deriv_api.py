@@ -110,3 +110,11 @@ async def test_mocked_ws():
     assert wsconnection.called['send'] == 2
     assert wsconnection.called['recv'] == 4
     wsconnection.clear()
+
+@pytest.mark.asyncio
+async def test_simple_send():
+    wsconnection = MockedWs()
+    api = deriv_api.DerivAPI(connection = wsconnection)
+    data1 = {"echo_req":{"ping": 1},"msg_type": "ping", "pong": 1}
+    wsconnection.add_data(data1)
+    print(await api.send(data1['echo_req']))

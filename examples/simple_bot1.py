@@ -3,6 +3,7 @@ import sys
 import asyncio
 import os
 from deriv_api import deriv_api
+from deriv_api.errors import APIError
 
 app_id = 1089
 api_token = os.getenv('DERIV_TOKEN', '')
@@ -57,17 +58,23 @@ async def sample_calls():
     print(response.get('buy').get('contract_id'))
     print(response.get('buy').get('longcode'))
     await asyncio.sleep(1) # wait 1 second
+    print("after buy")
+
     ''' open contracts '''
     poc = await api.proposal_open_contract(
         {"proposal_open_contract": 1, "contract_id": response.get('buy').get('contract_id'),
          # "subscribe": 1
          })
     print(poc)
-
+    print("waiting is sold........................")
     if not poc.get('proposal_open_contract').get('is_sold'):
         ''' sell '''
-        sell = await api.sell({"sell": response.get('buy').get('contract_id'), "price": 80})
-        print(sell)
+        try:
+            sell = await api.sell({"sell": response.get('buy').get('contract_id'), "price": 80})
+            print(sell)
+        except APIError as err:
+            print("error!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            print(err)
 
     ''' profit table '''
     profit_table = await api.profit_table({"profit_table": 1, "description": 1, "sort": "ASC"})
@@ -76,7 +83,7 @@ async def sample_calls():
     ''' transaction statement '''
     statement = await api.statement({"statement": 1, "description": 1, "limit": 100, "offset": 25})
     print(statement)
-
+    print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!end!!!!!!!!!!!!!!!!!!!!1")
     await api.disconnect()
     await api.clear()
 

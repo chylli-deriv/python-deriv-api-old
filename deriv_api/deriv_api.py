@@ -38,7 +38,7 @@ class DerivAPI(DerivAPICalls):
     apiFromEndpoint = deriv_api.DerivAPI({ endpoint: 'ws.binaryws.com', app_id: 1234 });
 
     param {Object}     options
-    param {WebSocket}  options.connection - A ready to use connection
+    param {WebSocketClientProtocol}  options.connection - A ready to use connection
     param {String}     options.endpoint   - API server to connect to
     param {Number}     options.app_id     - Application ID of the API user
     param {String}     options.lang       - Language of the API communication
@@ -124,7 +124,7 @@ class DerivAPI(DerivAPICalls):
                 'contract_id')
             if response.get('error') and not is_parent_subscription:
                 # TODO check what will happen if error. will it be forgot ?
-                self.pending_requests[req_id].on_error(response)
+                self.pending_requests[req_id].on_error(APIError(response))
                 continue
 
             if self.pending_requests[req_id].is_stopped and response.get('subscription'):
@@ -175,7 +175,7 @@ class DerivAPI(DerivAPICalls):
                 self.storage.set(request, response)
             return CustomFuture().set_result(True)
 
-        response_future.then(set_cache)
+        #response_future.then(set_cache)
         return await response_future
 
     async def subscribe(self, request):
