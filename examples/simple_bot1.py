@@ -14,33 +14,33 @@ if len(api_token) == 0:
 async def sample_calls():
     api = deriv_api.DerivAPI(app_id=app_id)
 
-    response = await api.ping({'ping': 1})
-    if response['ping']:
-        print(response['ping'])
-
-    active_symbols = await api.active_symbols({"active_symbols": "brief", "product_type": "basic"})
-    print(active_symbols)
+#    response = await api.ping({'ping': 1})
+#    if response['ping']:
+#        print(response['ping'])
+#
+#    active_symbols = await api.active_symbols({"active_symbols": "brief", "product_type": "basic"})
+#    print(active_symbols)
 
     ''' Authorize '''
     authorize = await api.authorize(api_token)
     print(authorize)
 
-    ''' Get Balance '''
-    response = await api.balance()
-    response = response['balance']
-    currency = response['currency']
-    print("Your current balance is", response['currency'], response['balance'])
-
-    # TODO test cache without fetch active_symbols directly
-    # test cache after fetch cache directly
-    # test cache with fetch active_symbols directly
-    '''Get active symbols from cache'''
-    cached_active_symbols = await api.cache.active_symbols({"active_symbols": "brief", "product_type": "basic"})
-    print(cached_active_symbols)
-
-    ''' get assets '''
-    assets = await api.cache.asset_index({"asset_index": 1})
-    print(assets)
+#    ''' Get Balance '''
+#    response = await api.balance()
+#    response = response['balance']
+#    currency = response['currency']
+#    print("Your current balance is", response['currency'], response['balance'])
+#
+#    # TODO test cache without fetch active_symbols directly
+#    # test cache after fetch cache directly
+#    # test cache with fetch active_symbols directly
+#    '''Get active symbols from cache'''
+#    cached_active_symbols = await api.cache.active_symbols({"active_symbols": "brief", "product_type": "basic"})
+#    print(cached_active_symbols)
+#
+#    ''' get assets '''
+#    assets = await api.cache.asset_index({"asset_index": 1})
+#    print(assets)
 
     ''' Get proposal '''
     proposal = await api.proposal({"proposal": 1, "amount": 100, "barrier": "+0.1", "basis": "payout",
@@ -56,7 +56,7 @@ async def sample_calls():
     print(response.get('buy').get('buy_price'))
     print(response.get('buy').get('contract_id'))
     print(response.get('buy').get('longcode'))
-
+    await asyncio.sleep(1) # wait 1 second
     ''' open contracts '''
     poc = await api.proposal_open_contract(
         {"proposal_open_contract": 1, "contract_id": response.get('buy').get('contract_id'),

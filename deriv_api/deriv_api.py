@@ -25,6 +25,7 @@ from deriv_api.utils import dict_to_cache_key, is_valid_url
 logging.basicConfig(
     format="%(asctime)s %(message)s",
     level=logging.ERROR
+    #level=logging.DEBUG
 )
 
 
@@ -101,6 +102,7 @@ class DerivAPI(DerivAPICalls):
         while self.connected.is_resolved() and self.connected.result() and self.wait_data_flag:
             data = await self.wsconnection.recv()
             response = json.loads(data)
+            print(f"<<<<<<<<<<<<<<<<<<<<<\n {response}")
             # TODO add self.events stream
 
             # TODO onopen onclose, can be set by await connection
@@ -195,7 +197,7 @@ class DerivAPI(DerivAPICalls):
         if 'req_id' not in request:
             self.req_id += 1
             request['req_id'] = self.req_id
-        print(f"req id {self.req_id}")
+        print(f">>>>>>>>>>>>>>>>>>>>>>>\n {request}")
         self.pending_requests[request['req_id']] = pending
 
         def connected_cb(result):
@@ -206,9 +208,7 @@ class DerivAPI(DerivAPICalls):
             pending.on_error(exception)
             return CustomFuture().set_result(1)
 
-        print(f"connected in line 178 {self.connected.is_resolved()}")
-        self.connected.then(connected_cb).then(lambda d: print("sending ? .....")).catch(error_cb)
-        print(f"in line 180")
+        self.connected.then(connected_cb).catch(error_cb)
         return pending
 
     async def subscribe(self, request):
