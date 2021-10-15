@@ -100,16 +100,25 @@ class DerivAPI(DerivAPICalls):
 
     async def __wait_data(self):
         while self.connected.is_resolved() and self.connected.result() and self.wait_data_flag:
+            # TODO if there is exception here, then no handle, should try it
+            print("waiting recv in wait_data")
             data = await self.wsconnection.recv()
+            print(f"waitting data is {data} ")
+            print(isinstance(data, str))
+
             response = json.loads(data)
             print(f"<<<<<<<<<<<<<<<<<<<<<\n {response}")
             # TODO add self.events stream
 
             # TODO onopen onclose, can be set by await connection
             req_id = response.get('req_id', None)
+            print(f"req id {req_id} pending reauest {self.pending_requests}")
             if not req_id or req_id not in self.pending_requests:
+                # TODO how is this sanity_errors used
                 self.sanity_errors.on_next(APIError("Extra response"))
+                print("here 118")
                 continue
+
             expect_response: Future = self.expect_response_types.get(response['msg_type'])
             if expect_response and not expect_response.done():
                 expect_response.set_result(response)
@@ -123,17 +132,20 @@ class DerivAPI(DerivAPICalls):
             is_parent_subscription = request and request.get('proposal_open_contract') and not request.get(
                 'contract_id')
             if response.get('error') and not is_parent_subscription:
-                # TODO check what will happen if error. will it be forgot ?
                 self.pending_requests[req_id].on_error(APIError(response))
+                print("here 136")
                 continue
 
+            # TODO where it is stopped?
             if self.pending_requests[req_id].is_stopped and response.get('subscription'):
                 # Source is already marked as completed. In this case we should
                 # send a forget request with the subscription id and ignore the response received.
                 subs_id = response['subscription']
                 await self.forget(subs_id);
+                print("here 144")
                 continue
 
+            print("calling on_next in wait_data")
             self.pending_requests[req_id].on_next(response)
 
     def __set_apiURL(self, connection_argument: dict) -> None:
