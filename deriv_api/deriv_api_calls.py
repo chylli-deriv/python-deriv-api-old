@@ -6049,15 +6049,16 @@ def parse_args(all_args):
         if not (param in config):
             return
 
-        if config[param]['type'] == 'string':
+        ptype = config[param].get('type')
+        if ptype and ptype == 'string':
             parsed_args[param] = f'{value}'
-        elif config[param]['type'] == 'numeric' or config[param]['type'] == 'boolean':
+        elif ptype and (ptype == 'numeric' or ptype == 'boolean'):
             parsed_args[param] = int(float(value))
             
     return parsed_args
 
 
-type_chekcers = {
+type_checkers = {
     'dict': lambda value: isinstance(value, dict),
     'numeric': lambda value: isinstance(value, Number),
     'string': lambda value: isinstance(value, str),
@@ -6087,7 +6088,7 @@ def validate_args(config, args):
         if not expected_type:
             continue
 
-        checker = type_chekcers.get(expected_type)
+        checker = type_checkers.get(expected_type)
         if not checker or not checker(value):
             error_messages.append(f'{expected_type} value expected but found {type(value)}: {param}')
 

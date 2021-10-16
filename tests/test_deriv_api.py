@@ -140,13 +140,16 @@ async def test_simple_send():
     res2 = data2.copy()
     add_req_id(res2, 2)
     assert await api.send(data1['echo_req']) == res1
-    assert await api.send(data2['echo_req']) == res2
+    assert await api.ticks(data2['echo_req']) == res2
     wsconnection.clear()
     await api.clear()
 
 @pytest.mark.asyncio
 async def test_subscription():
-    pass
+    wsconnection = MockedWs()
+    api = deriv_api.DerivAPI(connection=wsconnection)
+    wsconnection.clear()
+    await api.clear()
 
 
 def add_req_id(response, req_id):
