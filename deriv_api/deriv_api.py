@@ -96,7 +96,6 @@ class DerivAPI(DerivAPICalls):
 
     async def __connect_and_start_watching_data(self):
         await self.api_connect()
-        print(f"in __connect_and_start connected is {self.connected.is_resolved()}")
         self.wait_data_flag = True
         self.wait_data_task = asyncio.create_task(self.__wait_data())
         return
@@ -104,22 +103,16 @@ class DerivAPI(DerivAPICalls):
     async def __wait_data(self):
         while self.connected.is_resolved() and self.connected.result() and self.wait_data_flag:
             # TODO if there is exception here, then no handle, should try it
-            print("waiting recv in wait_data")
             data = await self.wsconnection.recv()
-            print(f"waitting data is {data} ")
-            print(isinstance(data, str))
 
             response = json.loads(data)
-            print(f"<<<<<<<<<<<<<<<<<<<<<\n {response}")
             # TODO add self.events stream
 
             # TODO onopen onclose, can be set by await connection
             req_id = response.get('req_id', None)
-            print(f"req id {req_id} pending reauest {self.pending_requests}")
             if not req_id or req_id not in self.pending_requests:
                 # TODO how is this sanity_errors used
                 self.sanity_errors.on_next(APIError("Extra response"))
-                print("here 118")
                 continue
 
             expect_response: Future = self.expect_response_types.get(response['msg_type'])
@@ -136,7 +129,6 @@ class DerivAPI(DerivAPICalls):
                 'contract_id')
             if response.get('error') and not is_parent_subscription:
                 self.pending_requests[req_id].on_error(APIError(response))
-                print("here 136")
                 continue
 
             # TODO where it is stopped?
@@ -145,10 +137,8 @@ class DerivAPI(DerivAPICalls):
                 # send a forget request with the subscription id and ignore the response received.
                 subs_id = response['subscription']
                 await self.forget(subs_id);
-                print("here 144")
                 continue
 
-            print("calling on_next in wait_data")
             self.pending_requests[req_id].on_next(response)
 
     def __set_apiURL(self, connection_argument: dict) -> None:
@@ -177,7 +167,6 @@ class DerivAPI(DerivAPICalls):
             self.wsconnection = await websockets.connect(self.api_url)
         # TODO check: don't replace old self.connected, because it will affect the `then` clause
         self.connected.set_result(True)
-        print(f"in api_connect {self.connected.result()}")
         return self.wsconnection
 
     async def send(self, request: dict) -> dict:
@@ -216,7 +205,6 @@ class DerivAPI(DerivAPICalls):
         self.pending_requests[request['req_id']] = pending
 
         def connected_cb(result):
-            print(f"in connected cb")
             return CustomFuture.wrap(asyncio.create_task(self.wsconnection.send(json.dumps(request))))
 
         def error_cb(exception):
@@ -293,7 +281,6 @@ class DerivAPI(DerivAPICalls):
 
 def transform_none_to_future(future):
     def then_cb(result):
-        print("in then_cb")
         new_future = CustomFuture()
         if result is None:
             return CustomFuture()
