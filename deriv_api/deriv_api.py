@@ -18,7 +18,8 @@ from deriv_api.in_memory import InMemory
 from deriv_api.subscription_manager import SubscriptionManager
 from deriv_api.utils import dict_to_cache_key, is_valid_url
 
-# TODO in the doc , list this ExpectResponse is missed
+# TODO TODO subscribe is not calling deriv_api_calls. that's , args not verified. can we improve it ?
+# TODO list these features missed
 # middleware is missed
 # events is missed
 
@@ -90,6 +91,8 @@ class DerivAPI(DerivAPICalls):
         self.cache = Cache(self.storage if self.storage else self, cache)
 
         self.create_and_watch_task = asyncio.create_task(self.__connect_and_start_watching_data())
+        # all created tasks that should be cleared at the end
+        self.tasks = []
 
     async def __connect_and_start_watching_data(self):
         await self.api_connect()
@@ -268,6 +271,12 @@ class DerivAPI(DerivAPICalls):
                 and self.expect_response_types[response_type].done():
             del self.expect_response_types[response_type]
 
+    # add the backend tasks that are not awaited by others
+    # will be awaited in the clear
+    def add_task(self, coroutine):
+        task = asyncio.create_task(coroutine)
+        self.tasks.append(task)
+        return task
     # TODO optimize create_and_watch_task and wait_data_task
     # TODO rewrite by `async with`
     # TODO cancel ok, so wait_data_flag is not used ?
@@ -275,6 +284,11 @@ class DerivAPI(DerivAPICalls):
         await self.create_and_watch_task
         self.wait_data_flag = False
         self.wait_data_task.cancel()
+        for task in self.tasks:
+            if(task.done()):
+                await task
+            else:
+                task.cancel('deriv api ended')
 
 
 def transform_none_to_future(future):

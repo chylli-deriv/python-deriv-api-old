@@ -40,6 +40,7 @@ class MockedWs:
         print(f"in send generate key of {new_request}")
         key = pickle.dumps(new_request)
         response = self.req_res_map.get(key)
+        print(f"in send resosne is {response}")
         if response:
             response['req_id'] = req_id
             self.data.append(response)
@@ -57,8 +58,8 @@ class MockedWs:
         # req_id will be added by api automatically
         # we remove it here for consistence
         request.pop('req_id', None)
+        print(f"in add data key is {request}")
         key = pickle.dumps(request)
-        print(f"in add data req is {response['echo_req']}")
         print(f"in add data key is {key}")
         self.req_res_map[key] = response
 
@@ -148,6 +149,28 @@ async def test_simple_send():
 async def test_subscription():
     wsconnection = MockedWs()
     api = deriv_api.DerivAPI(connection=wsconnection)
+    r50_data = {
+        'echo_req': {'ticks': 'R_50', 'subscribe': 1},
+        'msg_type': 'tick',
+        'subscription': {'id': 'A11111'}
+    }
+    r100_data = {
+        'echo_req': {'ticks': 'R_100', 'subscribe': 1},
+        'msg_type': 'tick',
+        'subscription': {'id': 'A22222'}
+    }
+    wsconnection.add_data(r50_data)
+    wsconnection.add_data(r100_data)
+    r50_req = r50_data['echo_req']
+    r50_req.pop('subscribe');
+    r100_req = r100_data['echo_req']
+    r100_req.pop('subscribe');
+    sub1 = await api.subscribe(r50_req)
+    sub2 = await api.subscribe(r100_req)
+    f1 = sub1.pipe(op.take(2), op.to_list(), op.to_future())
+    f2 = sub2.pipe(op.take(2), op.to_list(), op.to_future())
+    result = await asyncio.gather(f1, f2)
+    assert result == [[r50_data, r50_data], [r100_data, r100_data]]
     wsconnection.clear()
     await api.clear()
 

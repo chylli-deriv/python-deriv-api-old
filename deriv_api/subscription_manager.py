@@ -1,3 +1,5 @@
+import asyncio
+
 from deriv_api.utils import dict_to_cache_key
 from deriv_api.errors import APIError
 from rx import operators as op
@@ -68,14 +70,14 @@ class SubscriptionManager:
                 return
             # noinspection PyBroadException
             try:
-                self.forget(self.key_to_subs_id[key])
-            except Exception:
-                pass
+                self.api.add_task(self.forget(self.key_to_subs_id[key]))
+            except Exception as err:
+                print(f"err happened {err}")
             return
         print("before send_and_get_soruce")
         # TODO test this
         self.orig_sources[key]: Subject = self.api.send_and_get_source(request)
-        print("just after sned and get source")
+        print("just after send and get source")
         source: Observable = self.orig_sources[key].pipe(
             op.finally_action(forget_old_source),
             op.share()
