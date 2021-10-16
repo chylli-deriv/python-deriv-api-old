@@ -12,7 +12,7 @@ import json
 
 class MockedWs:
     def __init__(self):
-        self.data = []
+        self.common_data = []
         self.called = {'send': [], 'recv' : []}
         self.slept_at = 0
         self.queue = Subject()
@@ -21,15 +21,15 @@ class MockedWs:
             while 1:
                 await asyncio.sleep(0.01)
                 # make queue
-                data = self.data
-                self.data = []
+                data = self.common_data
+                self.common_data = []
                 for d in data:
-                    await asyncio.sleep(0.01)
+                    await asyncio.sleep(0.01) # TODO delete this line
                     print(f"emit in ws{d}")
                     self.queue.on_next(json.dumps(d))
                     # if subscription, then we keep it
                     if d.get('subscription'):
-                        self.data.append(d)
+                        self.common_data.append(d)
         self.task_build_queue = asyncio.create_task(build_queue())
     async def send(self, request):
         print(f"calling send {request}")
@@ -44,8 +44,15 @@ class MockedWs:
         print(f"in send resosne is {response}")
         if response:
             response['req_id'] = req_id
-            self.data.append(response)
+            self.common_data.append(response)
             self.req_res_map.pop(key)
+#        forget_id = request.get('forget')
+#        if forget_id:
+#            for idx, d in enumerate(self.data)
+#                subscription_data = d.get('subscription')
+#                if subscription_data and subscription_data['id'] == forget_id:
+#                    self.data[idx] = None
+
 
     async def recv(self):
         self.called['recv'].append(None)
