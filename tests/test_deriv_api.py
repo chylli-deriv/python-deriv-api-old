@@ -12,7 +12,7 @@ import json
 
 class MockedWs:
     def __init__(self):
-        self.common_data = []
+        self.data = []
         self.called = {'send': [], 'recv' : []}
         self.slept_at = 0
         self.queue = Subject()
@@ -21,15 +21,15 @@ class MockedWs:
             while 1:
                 await asyncio.sleep(0.01)
                 # make queue
-                data = self.common_data
-                self.common_data = []
-                for d in data:
+                for idx, d in enumerate(self.data):
+                    if d is None:
+                        continue
                     await asyncio.sleep(0.01) # TODO delete this line
                     print(f"emit in ws{d}")
                     self.queue.on_next(json.dumps(d))
                     # if subscription, then we keep it
-                    if d.get('subscription'):
-                        self.common_data.append(d)
+                    if not d.get('subscription'):
+                        self.data[idx] = None
         self.task_build_queue = asyncio.create_task(build_queue())
     async def send(self, request):
         print(f"calling send {request}")
@@ -44,14 +44,17 @@ class MockedWs:
         print(f"in send resosne is {response}")
         if response:
             response['req_id'] = req_id
-            self.common_data.append(response)
+            self.data.append(response)
             self.req_res_map.pop(key)
-#        forget_id = request.get('forget')
-#        if forget_id:
-#            for idx, d in enumerate(self.data)
-#                subscription_data = d.get('subscription')
-#                if subscription_data and subscription_data['id'] == forget_id:
-#                    self.data[idx] = None
+        forget_id = request.get('forget')
+        if forget_id:
+            for idx, d in enumerate(self.data):
+                if d is None:
+                    continue
+                subscription_data = d.get('subscription')
+                if subscription_data and subscription_data['id'] == forget_id:
+                    self.data[idx] = None
+                    break
 
 
     async def recv(self):
@@ -180,7 +183,7 @@ async def test_subscription():
     f2 = sub2.pipe(op.take(2), op.to_list(), op.to_future())
     result = await asyncio.gather(f1, f2)
     assert result == [[r50_data, r50_data], [r100_data, r100_data]]
-    await asyncio.sleep(0.1)  # wait sending 'forget' finished
+    await asyncio.sleep(0.01)  # wait sending 'forget' finished
     assert wsconnection.called['send'] == [
         '{"ticks": "R_50", "subscribe": 1, "req_id": 1}',
         '{"ticks": "R_100", "subscribe": 1, "req_id": 2}',
