@@ -194,6 +194,24 @@ async def test_subscription():
     wsconnection.clear()
     await api.clear()
 
+@pytest.mark.asyncio
+async def test_extra_response():
+    wsconnection = MockedWs()
+    api = deriv_api.DerivAPI(connection=wsconnection)
+    error = None
+    async def get_sanity_error():
+        nonlocal error
+        error = await api.sanity_errors.pipe(op.first(),op.to_future())
+    error_task = asyncio.create_task(get_sanity_error())
+    wsconnection.data.append({"hello":"world"})
+    try:
+        await asyncio.wait_for(error_task, timeout=0.1)
+        assert str(error) == 'APIError:Extra response'
+    except asyncio.exceptions.TimeoutError:
+        assert False, "error data apppear timeout "
+    wsconnection.clear()
+    await api.clear()
+
 
 def add_req_id(response, req_id):
     response['echo_req']['req_id'] = req_id
