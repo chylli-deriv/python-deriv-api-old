@@ -226,6 +226,22 @@ async def test_response_error():
     f1 = sub1.pipe(op.first(), op.to_future())
     with pytest.raises(ResponseError, match='ResponseError: test error message'):
         await f1
+    r50_data = {
+        'echo_req': {'ticks': 'R_50', 'subscribe': 1},
+        'msg_type': 'tick',
+        'req_id': f1.exception().req_id,
+        'subscription': {'id': 'A111111'}
+    }
+    wsconnection.data.append(r50_data) # add back r50 again
+    #will send a `forget` if get a response again
+    await asyncio.sleep(0.1)
+    assert wsconnection.called['send'][-1] == '{"forget": "A111111", "req_id": 2}'
+
+    #poc_data = {
+    #    'echo_req': {'proposal_open_contract': 1, 'subscribe': 1}
+    #    'msg_type': 'proposal_open_contract',
+    #    'error': {'code': 'TestError', 'message': 'test error message'}
+    #}
     wsconnection.clear()
     await api.clear()
 

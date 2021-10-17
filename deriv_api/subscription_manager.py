@@ -107,6 +107,7 @@ class SubscriptionManager:
         print(f"the source in crate_new_source is {id(source)}")
         return source
 
+    # TODO refactor subs_id and sub_id
     async def forget(self, sub_id):
         self.complete_subs_by_ids(sub_id)
         return await self.api.send({'forget': sub_id})

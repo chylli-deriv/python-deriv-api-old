@@ -131,11 +131,11 @@ class DerivAPI(DerivAPICalls):
                 self.pending_requests[req_id].on_error(ResponseError(response))
                 continue
 
-            # TODO where it is stopped?
+            # on_error will stop a subject object
             if self.pending_requests[req_id].is_stopped and response.get('subscription'):
                 # Source is already marked as completed. In this case we should
                 # send a forget request with the subscription id and ignore the response received.
-                subs_id = response['subscription']
+                subs_id = response['subscription']['id']
                 await self.forget(subs_id);
                 continue
 
