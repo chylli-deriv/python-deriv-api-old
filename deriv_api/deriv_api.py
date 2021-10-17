@@ -13,7 +13,7 @@ from websockets.legacy.client import WebSocketClientProtocol
 from deriv_api.cache import Cache
 from deriv_api.custom_future import CustomFuture
 from deriv_api.deriv_api_calls import DerivAPICalls
-from deriv_api.errors import APIError, ConstructionError
+from deriv_api.errors import APIError, ConstructionError, ResponseError
 from deriv_api.in_memory import InMemory
 from deriv_api.subscription_manager import SubscriptionManager
 from deriv_api.utils import dict_to_cache_key, is_valid_url
@@ -128,7 +128,7 @@ class DerivAPI(DerivAPICalls):
             is_parent_subscription = request and request.get('proposal_open_contract') and not request.get(
                 'contract_id')
             if response.get('error') and not is_parent_subscription:
-                self.pending_requests[req_id].on_error(APIError(response))
+                self.pending_requests[req_id].on_error(ResponseError(response))
                 continue
 
             # TODO where it is stopped?

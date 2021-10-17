@@ -3,7 +3,7 @@ import asyncio
 import pytest
 import pytest_mock
 from deriv_api import deriv_api
-from deriv_api.errors import APIError, ConstructionError
+from deriv_api.errors import APIError, ConstructionError, ResponseError
 from deriv_api.custom_future import CustomFuture
 from rx.subject import Subject
 import rx.operators as op
@@ -212,6 +212,22 @@ async def test_extra_response():
     wsconnection.clear()
     await api.clear()
 
+@pytest.mark.asyncio
+async def test_response_error():
+    wsconnection = MockedWs()
+    api = deriv_api.DerivAPI(connection=wsconnection)
+    r50_data = {
+        'echo_req': {'ticks': 'R_50', 'subscribe': 1},
+        'msg_type': 'tick',
+        'error': {'code': 'TestError', 'message': 'test error message'}
+    }
+    wsconnection.add_data(r50_data)
+    sub1 = await api.subscribe(r50_data['echo_req'])
+    f1 = sub1.pipe(op.first(), op.to_future())
+    with pytest.raises(ResponseError, match='ResponseError: test error message'):
+        await f1
+    wsconnection.clear()
+    await api.clear()
 
 def add_req_id(response, req_id):
     response['echo_req']['req_id'] = req_id

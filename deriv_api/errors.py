@@ -17,3 +17,14 @@ class APIError(error_factory('APIError')):
 
 class ConstructionError(error_factory('ConstructionError')):
     pass
+
+class ResponseError(Exception):
+    def __init__(self, response: dict):
+        self.request = response['echo_req']
+        self.code = response['error']['code']
+        self.message = response['error']['message']
+        self.msg_type = response['msg_type']
+        self.req_id = response.get('req_id')
+
+    def __str__(self) -> str:
+        return f"ResponseError: {self.message}"
