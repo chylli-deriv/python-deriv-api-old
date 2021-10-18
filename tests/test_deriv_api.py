@@ -19,11 +19,7 @@ class MockedWs:
         self.called = {'send': [], 'recv' : []}
         self.slept_at = 0
         self.queue = Subject()
-        def print_item(item):
-            print(f"queue coming {item}")
-        self.queue.subscribe(on_next=print_item)
         self.req_res_map = {}
-        self.seq = 0
         async def build_queue():
             while 1:
                 await asyncio.sleep(0.01)
@@ -31,11 +27,7 @@ class MockedWs:
                 for idx, d in enumerate(self.data):
                     if d is None:
                         continue
-                    await asyncio.sleep(0.01) # TODO delete this line
-                    #if 'paththrough' not in d:
-                    #    d['passthrough'] = {'num': 0}
-                    #self.seq = self.seq + 1
-                    #d['passthrough']['seq'] = self.seq
+                    await asyncio.sleep(0.01)
                     try:
                         self.queue.on_next(json.dumps(d))
                     except Exception as err:
