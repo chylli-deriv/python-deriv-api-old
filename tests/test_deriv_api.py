@@ -310,6 +310,11 @@ async def test_response_error():
     wsconnection.clear()
     await api.clear()
 
+@pytest.mark.asyncio
+async def test_subscribe_one_source():
+    pass
+
+
 def add_req_id(response, req_id):
     response['echo_req']['req_id'] = req_id
     response['req_id'] = req_id

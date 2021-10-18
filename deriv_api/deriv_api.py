@@ -287,6 +287,7 @@ class DerivAPI(DerivAPICalls):
                 await task
             else:
                 task.cancel('deriv api ended')
+        self.tasks = []
 
 
 def transform_none_to_future(future):
