@@ -1,7 +1,10 @@
 import asyncio
-
+import sys
+import traceback
 import pytest
 import pytest_mock
+import rx
+
 from deriv_api import deriv_api
 from deriv_api.errors import APIError, ConstructionError, ResponseError
 from deriv_api.custom_future import CustomFuture
@@ -16,7 +19,11 @@ class MockedWs:
         self.called = {'send': [], 'recv' : []}
         self.slept_at = 0
         self.queue = Subject()
+        def print_item(item):
+            print(f"queue coming {item}")
+        self.queue.subscribe(on_next=print_item)
         self.req_res_map = {}
+        self.seq = 0
         async def build_queue():
             while 1:
                 await asyncio.sleep(0.01)
@@ -25,6 +32,10 @@ class MockedWs:
                     if d is None:
                         continue
                     await asyncio.sleep(0.01) # TODO delete this line
+                    #if 'paththrough' not in d:
+                    #    d['passthrough'] = {'num': 0}
+                    #self.seq = self.seq + 1
+                    #d['passthrough']['seq'] = self.seq
                     print(f"emit in ws{d}")
                     self.queue.on_next(json.dumps(d))
                     # if subscription, then we keep it
@@ -48,20 +59,32 @@ class MockedWs:
             self.req_res_map.pop(key)
         forget_id = request.get('forget')
         if forget_id:
+            print(f"self.data {self.data}")
+            found = 0
             for idx, d in enumerate(self.data):
                 if d is None:
                     continue
                 subscription_data = d.get('subscription')
                 if subscription_data and subscription_data['id'] == forget_id:
+                    print("in send clearing data")
                     self.data[idx] = None
+                    found = 1
                     break
-
+            self.data.append({"echo_req": {
+                'req_id': req_id,
+                'forget': forget_id,
+            },
+                'forget': found,
+                'req_id': req_id,
+                'msg_type': 'forget'
+            })
 
     async def recv(self):
         self.called['recv'].append(None)
-        print("call recv")
+        print("call recv (((((((((((((((((((((((((((((")
         data = await self.queue.pipe(op.first(),op.to_future())
-        print("recv in test")
+        print(f"recv in test {data}")
+        print(")))))))))))))))))))))))))))))))))))))))))))")
         return data
 
     def add_data(self,response):
@@ -189,10 +212,43 @@ async def test_subscription():
         '{"ticks": "R_100", "subscribe": 1, "req_id": 2}',
         '{"forget": "A11111", "req_id": 3}',
         '{"forget": "A22222", "req_id": 4}']
-
-
     wsconnection.clear()
     await api.clear()
+
+@pytest.mark.asyncio
+async def test_forget():
+    wsconnection = MockedWs()
+    api = deriv_api.DerivAPI(connection=wsconnection)
+    # test subscription forget will mark source done
+    print("---------------------------------------------")
+    r50_data = {
+        'echo_req': {'ticks': 'R_50', 'subscribe': 1},
+        'msg_type': 'tick',
+        'subscription': {'id': 'A11111'}
+    }
+    wsconnection.add_data(r50_data)
+    r50_req = r50_data['echo_req']
+    r50_req.pop('subscribe');
+    sub1: rx.Observable = await api.subscribe(r50_req)
+    complete = False
+
+    def on_complete():
+        nonlocal complete
+        complete = True
+
+    sub1.subscribe(on_completed=on_complete)
+    await asyncio.sleep(0.1)
+    assert not complete, 'subscription not stopped'
+    print("!!!!!!!!!!!!!!!!!!!!forget!!!!!")
+    await api.forget('A11111')
+    print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^cleara")
+    await asyncio.sleep(0.1)
+    assert complete, 'subscription stopped after forget'
+    # TODO 1. why hange
+    # 2 why call forgot twice
+    wsconnection.clear()
+    await api.clear()
+
 
 @pytest.mark.asyncio
 async def test_extra_response():
@@ -237,11 +293,13 @@ async def test_response_error():
     await asyncio.sleep(0.1)
     assert wsconnection.called['send'][-1] == '{"forget": "A111111", "req_id": 2}'
 
+    ## TODO test if we can multi subscribe same source
     #poc_data = {
     #    'echo_req': {'proposal_open_contract': 1, 'subscribe': 1}
     #    'msg_type': 'proposal_open_contract',
     #    'error': {'code': 'TestError', 'message': 'test error message'}
     #}
+    #wsconnection.data.append(poc_data)
     wsconnection.clear()
     await api.clear()
 
