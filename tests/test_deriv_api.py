@@ -296,6 +296,33 @@ async def test_response_error():
     await api.clear()
 
 @pytest.mark.asyncio
+async def test_cache():
+    wsconnection = MockedWs()
+    api = deriv_api.DerivAPI(connection=wsconnection)
+    wsconnection.add_data({'ping':'pong', 'msg_type': 'ping', 'echo_req' : {'ping': 1}})
+    ping1 = await api.ping({'ping': 1})
+    assert len(wsconnection.called['send']) == 1
+    ping2 = await api.expect_response('ping')
+    assert len(wsconnection.called['send']) == 1, 'send can cache value for expect_response. get ping2 from cache, no send happen'
+    assert ping1 == ping2, "ping2 is ping1 "
+    ping3 = await api.cache.ping({'ping': 1})
+    assert len(wsconnection.called['send']) == 1, 'get ping3 from cache, no send happen'
+    assert ping1 == ping3, "ping3 is ping1 "
+    wsconnection.clear()
+    await api.clear()
+
+    wsconnection = MockedWs()
+    api = deriv_api.DerivAPI(connection=wsconnection)
+    wsconnection.add_data({'ping': 'pong', 'msg_type': 'ping', 'echo_req': {'ping': 1}})
+    ping1 = await api.cache.ping({'ping': 1})
+    assert len(wsconnection.called['send']) == 1
+    ping2 = await api.expect_response('ping')
+    assert len(wsconnection.called['send']) == 1, 'api.cache.ping can cache value. get ping2 from cache, no send happen'
+    assert ping1 == ping2, "ping2 is ping1 "
+    wsconnection.clear()
+    await api.clear()
+
+@pytest.mark.asyncio
 async def test_can_subscribe_one_source_many_times():
     wsconnection = MockedWs()
     api = deriv_api.DerivAPI(connection=wsconnection)

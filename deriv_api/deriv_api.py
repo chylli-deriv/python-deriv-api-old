@@ -77,6 +77,8 @@ class DerivAPI(DerivAPICalls):
         self.storage: Union[InMemory, Cache, None] = None
         if storage:
             self.storage = Cache(self, storage)
+        # If we have the storage look that one up
+        self.cache = Cache(self.storage if self.storage else self, cache)
 
         self.req_id = 0
         self.pending_requests: Dict[str, Subject] = {}
@@ -87,8 +89,6 @@ class DerivAPI(DerivAPICalls):
         self.wait_data_flag = False
         self.expect_response_types = {}
         self.wait_data_task = CustomFuture().set_result(1)
-        # If we have the storage look that one up
-        self.cache = Cache(self.storage if self.storage else self, cache)
 
         self.create_and_watch_task = asyncio.create_task(self.__connect_and_start_watching_data())
         # all created tasks that should be cleared at the end
@@ -169,17 +169,14 @@ class DerivAPI(DerivAPICalls):
         return self.wsconnection
 
     async def send(self, request: dict) -> dict:
-        response_future: CustomFuture = CustomFuture.wrap(
-            self.send_and_get_source(request).pipe(op.first(), op.to_future()))
-        def set_cache(response):
-            self.cache.set(request, response)
-            if self.storage:
-                self.storage.set(request, response)
-            return CustomFuture().set_result(True)
-        # TODO  set cache
-        #response_future.then(set_cache)
-        result = await response_future
-        return result
+        response_future = self.send_and_get_source(request).pipe(op.first(), op.to_future())
+
+        response = await response_future
+        print("setting cache")
+        self.cache.set(request, response)
+        if self.storage:
+            self.storage.set(request, response)
+        return response
 
     async def subscribe(self, request):
         return await self.subscription_manager.subscribe(request)
@@ -267,6 +264,7 @@ class DerivAPI(DerivAPICalls):
     # TODO optimize create_and_watch_task and wait_data_task
     # TODO rewrite by `async with`
     # TODO cancel ok, so wait_data_flag is not used ?
+    # TODO task should be deleted automatically when it is done
     async def clear(self):
         await self.create_and_watch_task
         self.wait_data_flag = False
