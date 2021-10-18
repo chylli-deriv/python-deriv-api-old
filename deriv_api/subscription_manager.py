@@ -74,15 +74,12 @@ class SubscriptionManager:
             except Exception as err:
                 print(f"err happened {err}")
             return
-        print("before send_and_get_soruce")
         # TODO test this
         self.orig_sources[key]: Subject = self.api.send_and_get_source(request)
-        print("just after send and get source")
         source: Observable = self.orig_sources[key].pipe(
             op.finally_action(forget_old_source),
             op.share()
         )
-        print("after api.send_and_get_source")
         self.sources[key] = source
         self.save_subs_per_msg_type(request, key)
         async def process_response():
@@ -104,14 +101,11 @@ class SubscriptionManager:
         # TODO wait to_future directly
         # TODO no wait
         #asyncio.wait(task)
-        print(f"the source in crate_new_source is {id(source)}")
         return source
 
     # TODO refactor subs_id and sub_id
     async def forget(self, sub_id):
-        print("forget in sub man before complete")
         self.complete_subs_by_ids(sub_id)
-        print("after compl before send")
         # TODO  will be better to send for get first and then complete subs by ids ?
         return await self.api.send({'forget': sub_id})
 

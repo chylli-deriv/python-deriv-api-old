@@ -103,7 +103,6 @@ class DerivAPI(DerivAPICalls):
     async def __wait_data(self):
         while self.connected.is_resolved() and self.connected.result() and self.wait_data_flag:
             # TODO if there is exception here, then no handle, should try it
-            print("calling recv in wait_data wait_data wait_data")
             data = await self.wsconnection.recv()
             print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
             print(data)
@@ -115,15 +114,12 @@ class DerivAPI(DerivAPICalls):
             if not req_id or req_id not in self.pending_requests:
                 # TODO how is this sanity_errors used
                 self.sanity_errors.on_next(APIError("Extra response"))
-                print(f"here 118 {req_id}")
                 continue
-            print("here line 120")
             expect_response: Future = self.expect_response_types.get(response['msg_type'])
             if expect_response and not expect_response.done():
                 expect_response.set_result(response)
             request = response['echo_req']
 
-            print("here line 126")
             # When one of the child subscriptions of `proposal_open_contract` has an error in the response,
             # it should be handled in the callback of consumer instead. Calling `error()` with parent subscription
             # will mark the parent subscription as complete and all child subscriptions will be forgotten.
@@ -134,19 +130,14 @@ class DerivAPI(DerivAPICalls):
                 self.pending_requests[req_id].on_error(ResponseError(response))
                 continue
 
-            print("here line 137")
             # on_error will stop a subject object
             if self.pending_requests[req_id].is_stopped and response.get('subscription'):
                 # Source is already marked as completed. In this case we should
                 # send a forget request with the subscription id and ignore the response received.
                 subs_id = response['subscription']['id']
-                print("forget again!!!!!!!!!!!!!!!!!!!!!1")
                 self.add_task(self.forget(subs_id))
-                print("await forget task created")
                 continue
 
-            print(f"wait data call on_next response req_id {req_id}")
-            print(f"souce id is {self.pending_requests[req_id]}")
             self.pending_requests[req_id].on_next(response)
 
     def __set_apiURL(self, connection_argument: dict) -> None:
@@ -180,7 +171,6 @@ class DerivAPI(DerivAPICalls):
     async def send(self, request: dict) -> dict:
         response_future: CustomFuture = CustomFuture.wrap(
             self.send_and_get_source(request).pipe(op.first(), op.to_future()))
-        print("creating response_future")
         def set_cache(response):
             self.cache.set(request, response)
             if self.storage:
@@ -188,9 +178,7 @@ class DerivAPI(DerivAPICalls):
             return CustomFuture().set_result(True)
         # TODO  set cache
         #response_future.then(set_cache)
-        print("await response future")
         result = await response_future
-        print("awaited response future")
         return result
 
     async def subscribe(self, request):
@@ -229,7 +217,6 @@ class DerivAPI(DerivAPICalls):
         return await self.subscription_manager.subscribe(request)
 
     async def forget(self, subs_id):
-        print("api forget")
         return await self.subscription_manager.forget(subs_id)
 
     async def forget_all(self, *types):
