@@ -311,8 +311,28 @@ async def test_response_error():
     await api.clear()
 
 @pytest.mark.asyncio
-async def test_subscribe_one_source():
-    pass
+async def test_can_subscribe_one_source_many_times():
+    wsconnection = MockedWs()
+    api = deriv_api.DerivAPI(connection=wsconnection)
+    r50_data = {
+        'echo_req': {'ticks': 'R_50', 'subscribe': 1},
+        'msg_type': 'tick',
+        'subscription': {'id': 'A11111'}
+    }
+    wsconnection.add_data(r50_data)
+    r50_req = r50_data['echo_req']
+    r50_req.pop('subscribe');
+    sub1 = await api.subscribe(r50_req)
+    f1 = sub1.pipe(op.take(2), op.to_list(), op.to_future())
+    f2 = sub1.pipe(op.take(2), op.to_list(), op.to_future())
+    result = await asyncio.gather(f1,f2)
+    assert result == [[r50_data, r50_data],[r50_data, r50_data]]
+    await asyncio.sleep(0.01)  # wait sending 'forget' finished
+    assert wsconnection.called['send'] == [
+        '{"ticks": "R_50", "subscribe": 1, "req_id": 1}',
+        '{"forget": "A11111", "req_id": 2}']
+    wsconnection.clear()
+    await api.clear()
 
 
 def add_req_id(response, req_id):
