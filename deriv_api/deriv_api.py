@@ -143,7 +143,8 @@ class DerivAPI(DerivAPICalls):
                 print("await forget task created")
                 continue
 
-            print("wait data call on_next response")
+            print(f"wait data call on_next response req_id {req_id}")
+            print(f"souce id is {self.pending_requests[req_id]}")
             self.pending_requests[req_id].on_next(response)
 
     def __set_apiURL(self, connection_argument: dict) -> None:

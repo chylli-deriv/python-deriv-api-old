@@ -37,7 +37,11 @@ class MockedWs:
                     #self.seq = self.seq + 1
                     #d['passthrough']['seq'] = self.seq
                     print(f"emit in ws{d}")
-                    self.queue.on_next(json.dumps(d))
+                    try:
+                        self.queue.on_next(json.dumps(d))
+                    except Exception as err:
+                        print(str(err))
+                    print("emit on next done ")
                     # if subscription, then we keep it
                     if not d.get('subscription'):
                         self.data[idx] = None
@@ -220,7 +224,6 @@ async def test_forget():
     wsconnection = MockedWs()
     api = deriv_api.DerivAPI(connection=wsconnection)
     # test subscription forget will mark source done
-    print("---------------------------------------------")
     r50_data = {
         'echo_req': {'ticks': 'R_50', 'subscribe': 1},
         'msg_type': 'tick',
@@ -239,9 +242,7 @@ async def test_forget():
     sub1.subscribe(on_completed=on_complete)
     await asyncio.sleep(0.1)
     assert not complete, 'subscription not stopped'
-    print("!!!!!!!!!!!!!!!!!!!!forget!!!!!")
     await api.forget('A11111')
-    print("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^cleara")
     await asyncio.sleep(0.1)
     assert complete, 'subscription stopped after forget'
     # TODO 1. why hange
@@ -292,14 +293,20 @@ async def test_response_error():
     #will send a `forget` if get a response again
     await asyncio.sleep(0.1)
     assert wsconnection.called['send'][-1] == '{"forget": "A111111", "req_id": 2}'
-
-    ## TODO test if we can multi subscribe same source
-    #poc_data = {
-    #    'echo_req': {'proposal_open_contract': 1, 'subscribe': 1}
-    #    'msg_type': 'proposal_open_contract',
-    #    'error': {'code': 'TestError', 'message': 'test error message'}
-    #}
-    #wsconnection.data.append(poc_data)
+    print("-------------------------------------" )
+    # TODO test if we can multi subscribe same source
+    poc_data = {
+        'echo_req': {'proposal_open_contract': 1, 'subscribe': 1},
+        'msg_type': 'proposal_open_contract',
+        'error': {'code': 'TestError', 'message': 'test error message'},
+        'subscription': {'id': 'ABC11111'}
+    }
+    wsconnection.add_data(poc_data)
+    sub1 = await api.subscribe(poc_data['echo_req'])
+    print("sub id is")
+    print(id(sub1))
+    response = await sub1.pipe(op.first(), op.to_future())
+    assert 'error' in response, "for the poc stream with out contract_id, the error response will not terminate the stream"
     wsconnection.clear()
     await api.clear()
 
