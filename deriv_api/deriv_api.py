@@ -117,12 +117,13 @@ class DerivAPI(DerivAPICalls):
                 self.sanity_errors.on_next(APIError("Extra response"))
                 print(f"here 118 {req_id}")
                 continue
-
+            print("here line 120")
             expect_response: Future = self.expect_response_types.get(response['msg_type'])
             if expect_response and not expect_response.done():
                 expect_response.set_result(response)
             request = response['echo_req']
 
+            print("here line 126")
             # When one of the child subscriptions of `proposal_open_contract` has an error in the response,
             # it should be handled in the callback of consumer instead. Calling `error()` with parent subscription
             # will mark the parent subscription as complete and all child subscriptions will be forgotten.
@@ -133,6 +134,7 @@ class DerivAPI(DerivAPICalls):
                 self.pending_requests[req_id].on_error(ResponseError(response))
                 continue
 
+            print("here line 137")
             # on_error will stop a subject object
             if self.pending_requests[req_id].is_stopped and response.get('subscription'):
                 # Source is already marked as completed. In this case we should

@@ -334,6 +334,27 @@ async def test_can_subscribe_one_source_many_times():
     wsconnection.clear()
     await api.clear()
 
+# TODO test expectResponse
+# TODO test cache
+
+@pytest.mark.asyncio
+async def test_reuse_poc_stream():
+    wsconnection = MockedWs()
+    api = deriv_api.DerivAPI(connection=wsconnection)
+    buy_data = {'echo_req': {'buy': 1, 'subscribe': 1},
+                           'subscription':  {'id': 'B111111'},
+                           'buy': {'contract_id': 1234567},
+                           'msg_type': 'proposal_open_contract'
+                           }
+    wsconnection.add_data(buy_data)
+    sub1 = await api.subscribe(buy_data['echo_req'])
+    sub2 = await api.subscribe({'proposal_open_contract': 1, 'contract_id': 1234567})
+    assert id(sub1) == id(sub2)
+    assert len(api.subscription_manager.buy_key_to_contract_id) == 1
+    await api.forget('B111111')
+    assert len(api.subscription_manager.buy_key_to_contract_id) == 0
+    wsconnection.clear()
+    await api.clear()
 
 def add_req_id(response, req_id):
     response['echo_req']['req_id'] = req_id
