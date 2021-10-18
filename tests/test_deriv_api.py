@@ -356,6 +356,19 @@ async def test_reuse_poc_stream():
     wsconnection.clear()
     await api.clear()
 
+@pytest.mark.asyncio
+async def test_expect_response():
+    wsconnection = MockedWs()
+    api = deriv_api.DerivAPI(connection=wsconnection)
+    wsconnection.add_data({'ping':'pong', 'msg_type': 'ping', 'echo_req' : {'ping': 1}})
+    get_ping = api.expect_response('ping')
+    assert not get_ping.done(), 'get ping is a future and is pending'
+    ping_result = await api.ping({'ping': 1})
+    assert get_ping.done(), 'get ping done'
+    assert ping_result == await get_ping
+    wsconnection.clear()
+    await api.clear()
+
 def add_req_id(response, req_id):
     response['echo_req']['req_id'] = req_id
     response['req_id'] = req_id
