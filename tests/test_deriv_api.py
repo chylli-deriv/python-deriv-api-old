@@ -225,8 +225,6 @@ async def test_forget():
     await api.forget('A11111')
     await asyncio.sleep(0.1)
     assert complete, 'subscription stopped after forget'
-    # TODO 1. why hange
-    # 2 why call forgot twice
     wsconnection.clear()
     await api.clear()
 
