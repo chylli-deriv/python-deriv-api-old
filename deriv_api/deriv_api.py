@@ -98,7 +98,7 @@ class DerivAPI(DerivAPICalls):
         return
 
     async def __wait_data(self):
-        while self.connected.is_resolved() and self.connected.result():
+        while self.connected.is_resolved():
             try:
                 data = await self.wsconnection.recv()
             except ConnectionClosedOK as err:
@@ -163,7 +163,6 @@ class DerivAPI(DerivAPICalls):
     async def api_connect(self) -> websockets.WebSocketClientProtocol:
         if not self.wsconnection and self.shouldReconnect:
             self.wsconnection = await websockets.connect(self.api_url)
-        # TODO check: don't replace old self.connected, because it will affect the `then` clause
         self.connected.set_result(True)
         return self.wsconnection
 
@@ -217,7 +216,8 @@ class DerivAPI(DerivAPICalls):
 
     async def disconnect(self) -> None:
         self.shouldReconnect = False
-        self.connected = CustomFuture().resolve(False)
+        self.connected = CustomFuture().reject(ConnectionClosedOK(1000, 'Closed by disconnect'))
+        self.connected.exception()  # fetch exception to avoid the warning of 'exception never retrieved'
         await self.wsconnection.close()
 
     # TODO remove customfuture, only use async and await ?

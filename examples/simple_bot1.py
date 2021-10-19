@@ -67,6 +67,7 @@ async def sample_calls():
     if not poc.get('proposal_open_contract').get('is_sold'):
         ''' sell '''
         try:
+            await asyncio.sleep(1) # wainting for 1 second for entry tick
             sell = await api.sell({"sell": response.get('buy').get('contract_id'), "price": 40})
             print(sell)
         except APIError as err:
