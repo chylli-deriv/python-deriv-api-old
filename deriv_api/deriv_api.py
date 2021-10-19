@@ -86,7 +86,6 @@ class DerivAPI(DerivAPICalls):
         self.subscription_manager: SubscriptionManager = SubscriptionManager(self)
         self.sanity_errors: Subject = Subject()
         self.subscription_manager = SubscriptionManager(self)
-        self.wait_data_flag = False
         self.expect_response_types = {}
         self.wait_data_task = CustomFuture().set_result(1)
 
@@ -105,7 +104,8 @@ class DerivAPI(DerivAPICalls):
             try:
                 data = await self.wsconnection.recv()
             except ConnectionClosedOK as err:
-                # TODO handle, set close flag etc
+                self.connected = CustomFuture().set_result(0)
+                # TODO send error events
                 break
             response = json.loads(data)
             # TODO add self.events stream
@@ -262,7 +262,6 @@ class DerivAPI(DerivAPICalls):
         return task
     # TODO optimize create_and_watch_task and wait_data_task
     # TODO rewrite by `async with`
-    # TODO cancel ok, so wait_data_flag is not used ?
     # TODO task should be deleted automatically when it is done
     async def clear(self):
         for task in self.tasks:
