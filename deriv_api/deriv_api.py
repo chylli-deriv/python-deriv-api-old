@@ -202,9 +202,7 @@ class DerivAPI(DerivAPICalls):
         async def send_message():
             try:
                 await self.connected
-                print("here sending")
                 await self.wsconnection.send(json.dumps(request))
-                print("here done")
             except Exception as err:
                 pending.on_error(err)
         self.add_task(send_message())
