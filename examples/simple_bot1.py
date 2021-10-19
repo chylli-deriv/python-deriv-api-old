@@ -32,9 +32,6 @@ async def sample_calls():
     currency = response['currency']
     print("Your current balance is", response['currency'], response['balance'])
 
-    # TODO test cache without fetch active_symbols directly
-    # test cache after fetch cache directly
-    # test cache with fetch active_symbols directly
     '''Get active symbols from cache'''
     cached_active_symbols = await api.cache.active_symbols({"active_symbols": "brief", "product_type": "basic"})
     print(cached_active_symbols)
