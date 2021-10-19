@@ -26,7 +26,6 @@ from deriv_api.utils import dict_to_cache_key, is_valid_url
 logging.basicConfig(
     format="%(asctime)s %(message)s",
     level=logging.ERROR
-    #level=logging.DEBUG
 )
 
 
@@ -104,8 +103,6 @@ class DerivAPI(DerivAPICalls):
         while self.connected.is_resolved() and self.connected.result() and self.wait_data_flag:
             # TODO if there is exception here, then no handle, should try it
             data = await self.wsconnection.recv()
-            print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
-            print(data)
             response = json.loads(data)
             # TODO add self.events stream
 
@@ -172,7 +169,6 @@ class DerivAPI(DerivAPICalls):
         response_future = self.send_and_get_source(request).pipe(op.first(), op.to_future())
 
         response = await response_future
-        print("setting cache")
         self.cache.set(request, response)
         if self.storage:
             self.storage.set(request, response)
@@ -197,7 +193,6 @@ class DerivAPI(DerivAPICalls):
         if 'req_id' not in request:
             self.req_id += 1
             request['req_id'] = self.req_id
-        print(f">>>>>>>>>>>>>>>>>>>>>>>\n {request}")
         self.pending_requests[request['req_id']] = pending
 
         def connected_cb(result):
