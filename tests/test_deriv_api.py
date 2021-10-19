@@ -116,20 +116,6 @@ def get_deriv_api(mocker):
     return deriv_api_obj
 
 @pytest.mark.asyncio
-async def test_transform_none_to_future():
-    loop = asyncio.get_event_loop()
-    f = loop.create_future()
-    trans_f = deriv_api.transform_none_to_future(f)
-    f.set_result(True)
-    await asyncio.sleep(0.01)
-    assert trans_f.is_resolved()
-    f = loop.create_future()
-    trans_f = deriv_api.transform_none_to_future(f)
-    f.set_result(None)
-    await asyncio.sleep(0.01)
-    assert trans_f.is_pending()
-
-@pytest.mark.asyncio
 async def test_mocked_ws():
     wsconnection = MockedWs()
     data1 = {"echo_req":{"ticks" : 'R_50', 'req_id': 1} ,"msg_type": "ticks", "req_id": 1, "subscription": {"id": "world"}}

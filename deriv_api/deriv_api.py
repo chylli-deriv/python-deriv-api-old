@@ -229,14 +229,17 @@ class DerivAPI(DerivAPICalls):
     def expect_response(self, *msg_types):
         for msg_type in msg_types:
             if msg_type not in self.expect_response_types:
-                def then_cb(val):
+                future: Future = asyncio.get_event_loop().create_future()
+                async def get_by_msg_type(a_msg_type):
+                    nonlocal future
+                    val = await self.cache.get_by_msg_type(a_msg_type)
                     if not val and self.storage:
-                        return CustomFuture().set_result(self.storage.get_by_msg_type(msg_type))
-                    return CustomFuture().set_result(val)
+                        val = self.storage.get_by_msg_type(a_msg_type)
+                    if val:
+                        future.set_result(val)
 
-                self.expect_response_types[msg_type] = transform_none_to_future(
-                    CustomFuture.wrap(asyncio.create_task(self.cache.get_by_msg_type(msg_type))).then(then_cb)
-                )
+                self.add_task(get_by_msg_type(msg_type))
+                self.expect_response_types[msg_type] = future
 
         # expect on a single response returns a single response, not a list
         if len(msg_types) == 1:
@@ -264,6 +267,7 @@ class DerivAPI(DerivAPICalls):
     # TODO optimize create_and_watch_task and wait_data_task
     # TODO rewrite by `async with`
     # TODO task should be deleted automatically when it is done
+    # TODO use for task in asyncio.Task.all_tasks():  https://stackoverflow.com/questions/40897428/please-explain-task-was-destroyed-but-it-is-pending
     def clear(self):
         for task in self.tasks:
             future = CustomFuture.wrap(task)
@@ -276,12 +280,3 @@ class DerivAPI(DerivAPICalls):
                 print(task.exception())
         self.tasks = []
 
-
-def transform_none_to_future(future):
-    def then_cb(result):
-        new_future = CustomFuture()
-        if result is None:
-            return CustomFuture()
-        return new_future.set_result(result)
-
-    return CustomFuture.wrap(future).then(then_cb)
