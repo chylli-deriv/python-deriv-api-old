@@ -259,12 +259,9 @@ class DerivAPI(DerivAPICalls):
         asyncio.create_task(coroutine, name=name)
     # TODO optimize create_and_watch_task and wait_data_task
     # TODO rewrite by `async with`
-    # TODO task should be deleted automatically when it is done
-    # TODO use for task in asyncio.Task.all_tasks():  https://stackoverflow.com/questions/40897428/please-explain-task-was-destroyed-but-it-is-pending
     # TODO check all create_task places, that should handle error itself by try catch
     def clear(self):
         for task in asyncio.all_tasks():
             if re.match(r"^deriv_api:",task.get_name()):
-                print(f"cancelling {task.get_name()}")
                 task.cancel('deriv api ended')
 
