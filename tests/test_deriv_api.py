@@ -271,7 +271,6 @@ async def test_response_error():
     #will send a `forget` if get a response again
     await asyncio.sleep(0.1)
     assert wsconnection.called['send'][-1] == '{"forget": "A111111", "req_id": 2}'
-    # TODO test if we can multi subscribe same source
     poc_data = {
         'echo_req': {'proposal_open_contract': 1, 'subscribe': 1},
         'msg_type': 'proposal_open_contract',
@@ -335,9 +334,6 @@ async def test_can_subscribe_one_source_many_times():
         '{"forget": "A11111", "req_id": 2}']
     wsconnection.clear()
     await api.clear()
-
-# TODO test expectResponse
-# TODO test cache
 
 @pytest.mark.asyncio
 async def test_reuse_poc_stream():
