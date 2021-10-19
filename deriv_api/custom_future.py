@@ -2,7 +2,8 @@ from __future__ import annotations
 import asyncio
 from asyncio import Future, CancelledError, InvalidStateError
 from typing import Any, Optional, TypeVar, Union, Callable
-
+# TODO weakref self in wrap or cascade or any tasks
+# https://docs.python.org/3/library/weakref.html
 _T = TypeVar("_T")
 _S = TypeVar("_S")
 

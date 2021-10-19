@@ -90,7 +90,7 @@ class DerivAPI(DerivAPICalls):
         self.wait_data_task = CustomFuture().set_result(1)
 
         # all created tasks that should be cleared at the end
-        self.tasks = []
+        self.tasks : Future = []
         self.add_task(self.__connect_and_start_watching_data())
 
     async def __connect_and_start_watching_data(self):
@@ -263,10 +263,16 @@ class DerivAPI(DerivAPICalls):
     # TODO optimize create_and_watch_task and wait_data_task
     # TODO rewrite by `async with`
     # TODO task should be deleted automatically when it is done
-    async def clear(self):
+    def clear(self):
         for task in self.tasks:
-            if not task.done():
+            future = CustomFuture.wrap(task)
+            if future.is_pending():
                 task.cancel('deriv api ended')
+                continue
+            if future.cancelled() or future.is_resolved():
+                continue
+            if future.is_rejected():
+                print(task.exception())
         self.tasks = []
 
 

@@ -34,6 +34,6 @@ async def sample_calls():
     await asyncio.sleep(5)
 
 
-    await api.clear()
+    api.clear()
 
 asyncio.run(sample_calls())

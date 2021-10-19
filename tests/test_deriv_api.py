@@ -99,7 +99,7 @@ async def test_deriv_api(mocker):
     mocker.patch('deriv_api.deriv_api.DerivAPI.api_connect', return_value='')
     deriv_api_obj = deriv_api.DerivAPI(app_id=1234, endpoint='localhost')
     assert(isinstance(deriv_api_obj, deriv_api.DerivAPI))
-    await deriv_api_obj.clear()
+    deriv_api_obj.clear()
 
 @pytest.mark.asyncio
 async def test_get_url(mocker):
@@ -108,7 +108,7 @@ async def test_get_url(mocker):
     assert deriv_api_obj.get_url("ws://localhost") == "ws://localhost"
     with pytest.raises(ConstructionError, match=r"Invalid URL:testurl"):
         deriv_api_obj.get_url("testurl")
-    await deriv_api_obj.clear()
+    deriv_api_obj.clear()
 
 def get_deriv_api(mocker):
     mocker.patch('deriv_api.deriv_api.DerivAPI.api_connect', return_value=CustomFuture().set_result(1))
@@ -162,7 +162,7 @@ async def test_simple_send():
     assert await api.ticks(data2['echo_req']) == res2
     assert len(wsconnection.called['send']) == 2
     wsconnection.clear()
-    await api.clear()
+    api.clear()
 
 @pytest.mark.asyncio
 async def test_subscription():
@@ -197,7 +197,7 @@ async def test_subscription():
         '{"forget": "A11111", "req_id": 3}',
         '{"forget": "A22222", "req_id": 4}']
     wsconnection.clear()
-    await api.clear()
+    api.clear()
 
 @pytest.mark.asyncio
 async def test_forget():
@@ -226,7 +226,7 @@ async def test_forget():
     await asyncio.sleep(0.1)
     assert complete, 'subscription stopped after forget'
     wsconnection.clear()
-    await api.clear()
+    api.clear()
 
 
 @pytest.mark.asyncio
@@ -245,7 +245,7 @@ async def test_extra_response():
     except asyncio.exceptions.TimeoutError:
         assert False, "error data apppear timeout "
     wsconnection.clear()
-    await api.clear()
+    api.clear()
 
 @pytest.mark.asyncio
 async def test_response_error():
@@ -282,7 +282,7 @@ async def test_response_error():
     response = await sub1.pipe(op.first(), op.to_future())
     assert 'error' in response, "for the poc stream with out contract_id, the error response will not terminate the stream"
     wsconnection.clear()
-    await api.clear()
+    api.clear()
 
 @pytest.mark.asyncio
 async def test_cache():
@@ -298,7 +298,7 @@ async def test_cache():
     assert len(wsconnection.called['send']) == 1, 'get ping3 from cache, no send happen'
     assert ping1 == ping3, "ping3 is ping1 "
     wsconnection.clear()
-    await api.clear()
+    api.clear()
 
     wsconnection = MockedWs()
     api = deriv_api.DerivAPI(connection=wsconnection)
@@ -309,7 +309,7 @@ async def test_cache():
     assert len(wsconnection.called['send']) == 1, 'api.cache.ping can cache value. get ping2 from cache, no send happen'
     assert ping1 == ping2, "ping2 is ping1 "
     wsconnection.clear()
-    await api.clear()
+    api.clear()
 
 @pytest.mark.asyncio
 async def test_can_subscribe_one_source_many_times():
@@ -333,7 +333,7 @@ async def test_can_subscribe_one_source_many_times():
         '{"ticks": "R_50", "subscribe": 1, "req_id": 1}',
         '{"forget": "A11111", "req_id": 2}']
     wsconnection.clear()
-    await api.clear()
+    api.clear()
 
 @pytest.mark.asyncio
 async def test_reuse_poc_stream():
@@ -352,7 +352,7 @@ async def test_reuse_poc_stream():
     await api.forget('B111111')
     assert len(api.subscription_manager.buy_key_to_contract_id) == 0
     wsconnection.clear()
-    await api.clear()
+    api.clear()
 
 @pytest.mark.asyncio
 async def test_expect_response():
@@ -365,7 +365,7 @@ async def test_expect_response():
     assert get_ping.done(), 'get ping done'
     assert ping_result == await get_ping
     wsconnection.clear()
-    await api.clear()
+    api.clear()
 
 def add_req_id(response, req_id):
     response['echo_req']['req_id'] = req_id
