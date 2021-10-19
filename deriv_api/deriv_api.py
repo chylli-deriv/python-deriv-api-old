@@ -199,14 +199,15 @@ class DerivAPI(DerivAPICalls):
             request['req_id'] = self.req_id
         self.pending_requests[request['req_id']] = pending
 
-        def connected_cb(result):
-            return CustomFuture.wrap(asyncio.create_task(self.wsconnection.send(json.dumps(request))))
-
-        def error_cb(exception):
-            pending.on_error(exception)
-            return CustomFuture().set_result(1)
-
-        self.connected.then(connected_cb).catch(error_cb)
+        async def send_message():
+            try:
+                await self.connected
+                print("here sending")
+                await self.wsconnection.send(json.dumps(request))
+                print("here done")
+            except Exception as err:
+                pending.on_error(err)
+        self.add_task(send_message())
         return pending
 
     async def subscribe(self, request):
