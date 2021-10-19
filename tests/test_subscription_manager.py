@@ -37,7 +37,8 @@ class API:
             def next(self, error):
                 return error
         return SanityErrors()
-
+    def add_task(self, task):
+        pass
 
 def test_get_msg_type():
     assert get_msg_type({'hello': 1}) is None

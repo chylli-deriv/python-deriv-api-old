@@ -70,7 +70,7 @@ class SubscriptionManager:
                 return
             # noinspection PyBroadException
             try:
-                self.api.add_task(self.forget(self.key_to_subs_id[key]))
+                self.api.add_task(self.forget(self.key_to_subs_id[key]), 'forget old subscription')
             except Exception as err:
                 print(f"err happened {err}")
             return

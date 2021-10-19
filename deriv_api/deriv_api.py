@@ -89,14 +89,12 @@ class DerivAPI(DerivAPICalls):
         self.expect_response_types = {}
         self.wait_data_task = CustomFuture().set_result(1)
 
-        # all created tasks that should be cleared at the end
-        self.tasks : Future = []
-        self.add_task(self.__connect_and_start_watching_data())
+        self.add_task(self.__connect_and_start_watching_data(), 'connect_and_start_watching_data')
 
     async def __connect_and_start_watching_data(self):
         await self.api_connect()
-        # TODO this add_task is needn't ? we have connect_and_start_watching_data already
-        self.add_task(self.__wait_data())
+        # TODO this create_task is needn't ? we have connect_and_start_watching_data already
+        self.add_task(self.__wait_data(), 'wait_data')
         return
 
     async def __wait_data(self):
@@ -136,7 +134,7 @@ class DerivAPI(DerivAPICalls):
                 # Source is already marked as completed. In this case we should
                 # send a forget request with the subscription id and ignore the response received.
                 subs_id = response['subscription']['id']
-                self.add_task(self.forget(subs_id))
+                self.add_task(self.forget(subs_id), 'forget subscription')
                 continue
 
             self.pending_requests[req_id].on_next(response)
@@ -205,7 +203,7 @@ class DerivAPI(DerivAPICalls):
                 await self.wsconnection.send(json.dumps(request))
             except Exception as err:
                 pending.on_error(err)
-        self.add_task(send_message())
+        self.add_task(send_message(), 'send_message')
         return pending
 
     async def subscribe(self, request):
@@ -236,7 +234,7 @@ class DerivAPI(DerivAPICalls):
                     if val:
                         future.set_result(val)
 
-                self.add_task(get_by_msg_type(msg_type))
+                self.add_task(get_by_msg_type(msg_type), 'get_by_msg_type')
                 self.expect_response_types[msg_type] = future
 
         # expect on a single response returns a single response, not a list
@@ -256,25 +254,17 @@ class DerivAPI(DerivAPICalls):
                 and self.expect_response_types[response_type].done():
             del self.expect_response_types[response_type]
 
-    # add the backend tasks that are not awaited by others
-    # will be awaited in the clear
-    def add_task(self, coroutine):
-        task = asyncio.create_task(coroutine)
-        self.tasks.append(task)
-        return task
+    def add_task(self, coroutine, name=''):
+        name = 'deriv_api:' + name
+        asyncio.create_task(coroutine, name=name)
     # TODO optimize create_and_watch_task and wait_data_task
     # TODO rewrite by `async with`
     # TODO task should be deleted automatically when it is done
     # TODO use for task in asyncio.Task.all_tasks():  https://stackoverflow.com/questions/40897428/please-explain-task-was-destroyed-but-it-is-pending
+    # TODO check all create_task places, that should handle error itself by try catch
     def clear(self):
-        for task in self.tasks:
-            future = CustomFuture.wrap(task)
-            if future.is_pending():
+        for task in asyncio.all_tasks():
+            if re.match(r"^deriv_api:",task.get_name()):
+                print(f"cancelling {task.get_name()}")
                 task.cancel('deriv api ended')
-                continue
-            if future.cancelled() or future.is_resolved():
-                continue
-            if future.is_rejected():
-                print(task.exception())
-        self.tasks = []
 
