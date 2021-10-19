@@ -74,8 +74,8 @@ class SubscriptionManager:
             except Exception as err:
                 print(f"err happened {err}")
             return
-        # TODO test this
-        self.orig_sources[key]: Subject = self.api.send_and_get_source(request)
+
+        self.orig_sources[key]: Observable = self.api.send_and_get_source(request)
         source: Observable = self.orig_sources[key].pipe(
             op.finally_action(forget_old_source),
             op.share()

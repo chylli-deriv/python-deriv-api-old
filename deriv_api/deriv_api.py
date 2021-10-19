@@ -9,6 +9,7 @@ import websockets
 from rx import operators as op
 from rx.subject import Subject
 from websockets.legacy.client import WebSocketClientProtocol
+from websockets.exceptions import ConnectionClosedOK
 
 from deriv_api.cache import Cache
 from deriv_api.custom_future import CustomFuture
@@ -89,20 +90,23 @@ class DerivAPI(DerivAPICalls):
         self.expect_response_types = {}
         self.wait_data_task = CustomFuture().set_result(1)
 
-        self.create_and_watch_task = asyncio.create_task(self.__connect_and_start_watching_data())
         # all created tasks that should be cleared at the end
         self.tasks = []
+        self.add_task(self.__connect_and_start_watching_data())
 
     async def __connect_and_start_watching_data(self):
         await self.api_connect()
-        self.wait_data_flag = True
-        self.wait_data_task = asyncio.create_task(self.__wait_data())
+        # TODO this add_task is needn't ? we have connect_and_start_watching_data already
+        self.add_task(self.__wait_data())
         return
 
     async def __wait_data(self):
-        while self.connected.is_resolved() and self.connected.result() and self.wait_data_flag:
-            # TODO if there is exception here, then no handle, should try it
-            data = await self.wsconnection.recv()
+        while self.connected.is_resolved() and self.connected.result():
+            try:
+                data = await self.wsconnection.recv()
+            except ConnectionClosedOK as err:
+                # TODO handle, set close flag etc
+                break
             response = json.loads(data)
             # TODO add self.events stream
 
@@ -261,13 +265,8 @@ class DerivAPI(DerivAPICalls):
     # TODO cancel ok, so wait_data_flag is not used ?
     # TODO task should be deleted automatically when it is done
     async def clear(self):
-        await self.create_and_watch_task
-        self.wait_data_flag = False
-        self.wait_data_task.cancel()
         for task in self.tasks:
-            if(task.done()):
-                await task
-            else:
+            if not task.done():
                 task.cancel('deriv api ended')
         self.tasks = []
 
