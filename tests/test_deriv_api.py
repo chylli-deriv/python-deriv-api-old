@@ -12,6 +12,7 @@ from rx.subject import Subject
 import rx.operators as op
 import pickle
 import json
+from websockets.exceptions import ConnectionClosedOK, ConnectionClosedError
 
 class MockedWs:
     def __init__(self):
@@ -352,6 +353,56 @@ async def test_expect_response():
     assert ping_result == await get_ping
     wsconnection.clear()
     api.clear()
+
+@pytest.mark.asyncio
+async def test_ws_disconnect():
+    class MockedWs2(MockedWs):
+        def __init__(self):
+            self.closed = CustomFuture()
+            self.exception = ConnectionClosedOK(1000, 'test disconnect')
+            super().__init__()
+        async def close(self):
+            self.closed.resolve(self.exception)
+            pass
+        async def send(self):
+            exc = await self.closed
+            raise exc
+        async def recv(self):
+            print("awaiting closed")
+            exc = await self.closed
+            print("raising error")
+            raise exc
+
+    # closed by api
+    wsconnection = MockedWs2()
+    wsconnection.exception = ConnectionClosedOK(1000, 'Closed by api')
+    api = deriv_api.DerivAPI(connection=wsconnection)
+    last_error = api.sanity_errors.pipe(op.first(), op.to_future())
+    await asyncio.sleep(0.1) # waiting for init finished
+    await api.disconnect() # it will set connected as 'Closed by disconnect', and cause MockedWs2 raising `test disconnect`
+    assert isinstance((await last_error), ConnectionClosedOK), 'sanity error get errors'
+    with pytest.raises(ConnectionClosedOK, match='Closed by disconnect'):
+        await api.send({'ping': 1})  # send will get same error
+    with pytest.raises(ConnectionClosedOK, match='Closed by disconnect'):
+        await api.connected # send will get same error
+    wsconnection.clear()
+    api.clear()
+
+    # closed by remote
+    wsconnection = MockedWs2()
+    api = deriv_api.DerivAPI(connection=wsconnection)
+    wsconnection.exception = ConnectionClosedError(1234, 'Closed by remote')
+    last_error = api.sanity_errors.pipe(op.first(), op.to_future())
+    await asyncio.sleep(0.1) # waiting for init finished
+    await wsconnection.close() # it will set connected as 'Closed by disconnect', and cause MockedWs2 raising `test disconnect`
+    assert isinstance((await last_error), ConnectionClosedError), 'sanity error get errors'
+    with pytest.raises(ConnectionClosedError, match='Closed by remote'):
+        await api.send({'ping': 1})  # send will get same error
+    with pytest.raises(ConnectionClosedError, match='Closed by remote'):
+        await api.connected  # send will get same error
+    wsconnection.clear()
+    api.clear()
+
 
 def add_req_id(response, req_id):
     response['echo_req']['req_id'] = req_id

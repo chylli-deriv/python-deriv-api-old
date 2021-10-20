@@ -9,7 +9,7 @@ import websockets
 from rx import operators as op
 from rx.subject import Subject
 from websockets.legacy.client import WebSocketClientProtocol
-from websockets.exceptions import ConnectionClosedOK
+from websockets.exceptions import ConnectionClosedOK, ConnectionClosed
 
 from deriv_api.cache import Cache
 from deriv_api.custom_future import CustomFuture
@@ -82,6 +82,7 @@ class DerivAPI(DerivAPICalls):
 
         self.req_id = 0
         self.pending_requests: Dict[str, Subject] = {}
+        # resolved: connected  rejected: disconnected  pending: not connected yet
         self.connected = CustomFuture()
         self.subscription_manager: SubscriptionManager = SubscriptionManager(self)
         self.sanity_errors: Subject = Subject()
@@ -92,19 +93,27 @@ class DerivAPI(DerivAPICalls):
         self.add_task(self.__connect_and_start_watching_data(), 'connect_and_start_watching_data')
 
     async def __connect_and_start_watching_data(self):
+        print("will start api_connect")
         await self.api_connect()
+        print("connect_and_start .. will start wait_data")
         # TODO this create_task is needn't ? we have connect_and_start_watching_data already
         self.add_task(self.__wait_data(), 'wait_data')
         return
 
     async def __wait_data(self):
+        print("starting wait_data")
         while self.connected.is_resolved():
+            print("in while")
             try:
                 data = await self.wsconnection.recv()
-            except ConnectionClosedOK as err:
-                self.connected = CustomFuture().set_result(0)
-                # TODO send error events
+            except ConnectionClosed as err:
+                if self.connected.is_resolved():
+                    self.connected = CustomFuture().reject(err)
+                    self.connected.exception()  # call it to hide the warning of 'exception never retrieved'
+                self.sanity_errors.on_next(err)
                 break
+            except Exception as err:
+                print(f"error happened {err}")
             response = json.loads(data)
             # TODO add self.events stream
 
@@ -161,9 +170,16 @@ class DerivAPI(DerivAPICalls):
         return url
 
     async def api_connect(self) -> websockets.WebSocketClientProtocol:
+        print("in api_connect")
         if not self.wsconnection and self.shouldReconnect:
+            print("calling ws.connect")
             self.wsconnection = await websockets.connect(self.api_url)
-        self.connected.set_result(True)
+        print("after connect")
+        if self.connected.is_pending():
+            self.connected.resolve(True)
+        else:
+            self.connected = CustomFuture().resolve(True)
+        print("connected set true")
         return self.wsconnection
 
     async def send(self, request: dict) -> dict:
