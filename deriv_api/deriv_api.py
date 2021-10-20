@@ -19,7 +19,7 @@ from deriv_api.in_memory import InMemory
 from deriv_api.subscription_manager import SubscriptionManager
 from deriv_api.utils import dict_to_cache_key, is_valid_url
 
-# TODO TODO subscribe is not calling deriv_api_calls. that's , args not verified. can we improve it ?
+# TODO NEXT subscribe is not calling deriv_api_calls. that's , args not verified. can we improve it ?
 # TODO list these features missed
 # middleware is missed
 # events is missed
@@ -215,6 +215,7 @@ class DerivAPI(DerivAPICalls):
         return await self.subscription_manager.forget_all(*types);
 
     async def disconnect(self) -> None:
+        # TODO NEXT reconnect feature
         self.shouldReconnect = False
         self.connected = CustomFuture().reject(ConnectionClosedOK(1000, 'Closed by disconnect'))
         self.connected.exception()  # fetch exception to avoid the warning of 'exception never retrieved'

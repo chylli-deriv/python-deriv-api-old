@@ -3,6 +3,8 @@ import asyncio
 import pytest
 from deriv_api.custom_future import CustomFuture
 from asyncio.exceptions import InvalidStateError, CancelledError
+import sys
+
 def test_custom_future():
     f1 = CustomFuture()
     assert f1.is_pending()
@@ -147,3 +149,28 @@ async def test_future_then():
     f2 = f1.then(None, else_callback)
     f1.set_result('f1 ok')
     assert (await f2) == 'f1 ok', 'If no suitable callback, then clone the result'
+
+def test_refcount():
+    # test then method
+    f1 = CustomFuture()
+    assert sys.getrefcount(f1) == 2, "new created future has 2 refcount"
+    def then_cb():
+        return CustomFuture().resolve(True)
+    def else_cb():
+        return CustomFuture().resolve(True)
+    f1.then(then_cb(), else_cb)
+    assert sys.getrefcount(f1) == 2, "after add then else db, future has 2 refcount"
+
+    #test cascade method
+    core_future = asyncio.get_event_loop().create_future()
+    assert sys.getrefcount(core_future) == 2, "new created future has 2 refcount"
+    custom_future = CustomFuture()
+    custom_future.cascade(core_future)
+    assert sys.getrefcount(core_future) == 2, "after cascade, core_future future has 2 refcount"
+    assert sys.getrefcount(custom_future) == 3, "after cascade, custom future has 3 refcount"
+
+    # test wrap method
+    core_future = asyncio.get_event_loop().create_future()
+    custom_future = CustomFuture.wrap(core_future)
+    assert sys.getrefcount(core_future) == 2, "after cascade, core_future future has 2 refcount"
+    assert sys.getrefcount(custom_future) == 3, "after cascade, custom future has 3 refcount"

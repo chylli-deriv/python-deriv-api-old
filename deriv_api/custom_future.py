@@ -2,6 +2,7 @@ from __future__ import annotations
 import asyncio
 from asyncio import Future, CancelledError, InvalidStateError
 from typing import Any, Optional, TypeVar, Union, Callable
+import weakref
 # TODO weakref self in wrap or cascade or any tasks
 # https://docs.python.org/3/library/weakref.html
 _T = TypeVar("_T")
@@ -22,8 +23,9 @@ class CustomFuture(Future):
 
         custom_future = cls(loop=future.get_loop())
         custom_future.cascade(future)
-
+        weak_future = weakref.ref(future)
         def cancel_cb(cb_future: Future):
+            future = weak_future()
             if cb_future.cancelled() and not future.done():
                 try:
                     cb_future.result()
