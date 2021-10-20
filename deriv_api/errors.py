@@ -20,6 +20,7 @@ class ConstructionError(error_factory('ConstructionError')):
 
 class ResponseError(Exception):
     def __init__(self, response: dict):
+        super().__init__(response['error']['message'])
         self.request = response['echo_req']
         self.code = response['error']['code']
         self.message = response['error']['message']
@@ -28,3 +29,12 @@ class ResponseError(Exception):
 
     def __str__(self) -> str:
         return f"ResponseError: {self.message}"
+
+class AddedTaskError(Exception):
+    def __init__(self, exception, name):
+        super().__init__()
+        self.exception = exception
+        self.name = name
+
+    def __str__(self) -> str:
+        return f"{self.name}: {str(self.exception)}"

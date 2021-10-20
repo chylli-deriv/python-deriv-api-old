@@ -14,7 +14,7 @@ from websockets.exceptions import ConnectionClosedOK, ConnectionClosed
 from deriv_api.cache import Cache
 from deriv_api.custom_future import CustomFuture
 from deriv_api.deriv_api_calls import DerivAPICalls
-from deriv_api.errors import APIError, ConstructionError, ResponseError
+from deriv_api.errors import APIError, ConstructionError, ResponseError, AddedTaskError
 from deriv_api.in_memory import InMemory
 from deriv_api.subscription_manager import SubscriptionManager
 from deriv_api.utils import dict_to_cache_key, is_valid_url
@@ -89,11 +89,13 @@ class DerivAPI(DerivAPICalls):
         self.subscription_manager = SubscriptionManager(self)
         self.expect_response_types = {}
         self.wait_data_task = CustomFuture().set_result(1)
-        self.add_task(self.api_connect())
-        self.add_task(self.__wait_data())
+        self.add_task(self.api_connect(), 'api_connect')
+        self.add_task(self.__wait_data(), 'wait_data')
 
     async def __wait_data(self):
+        print("waiting connected")
         await self.connected
+        print("waited")
         while self.connected.is_resolved():
             try:
                 data = await self.wsconnection.recv()
@@ -245,12 +247,23 @@ class DerivAPI(DerivAPICalls):
                 and self.expect_response_types[response_type].done():
             del self.expect_response_types[response_type]
 
-    def add_task(self, coroutine, name=''):
+    def add_task(self, coroutine, name):
         name = 'deriv_api:' + name
-        asyncio.create_task(coroutine, name=name)
-    # TODO check all create_task places, that should handle error itself by try catch
+        print(f"adding task name {name}")
+        async def wrap_coro(coru, name):
+            try:
+                await coru
+            except Exception as err:
+                self.sanity_errors.on_next(AddedTaskError(err, name))
+
+        asyncio.create_task(wrap_coro(coroutine, name), name=name)
+
+    # TODO disconnect function should check if the wsconnection is created itself or by args
+    # and then add diconnect into clear
     def clear(self):
         for task in asyncio.all_tasks():
+            print(f"checking task {task.get_name()}")
             if re.match(r"^deriv_api:",task.get_name()):
+                print(f"cancelling task {task.get_name()}")
                 task.cancel('deriv api ended')
 

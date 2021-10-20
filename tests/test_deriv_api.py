@@ -100,6 +100,7 @@ async def test_deriv_api(mocker):
     mocker.patch('deriv_api.deriv_api.DerivAPI.api_connect', return_value='')
     deriv_api_obj = deriv_api.DerivAPI(app_id=1234, endpoint='localhost')
     assert(isinstance(deriv_api_obj, deriv_api.DerivAPI))
+    await asyncio.sleep(0.1)
     deriv_api_obj.clear()
 
 @pytest.mark.asyncio
@@ -402,6 +403,17 @@ async def test_ws_disconnect():
     wsconnection.clear()
     api.clear()
 
+@pytest.mark.asyncio
+async def test_add_task():
+    wsconnection = MockedWs()
+    api = deriv_api.DerivAPI(connection=wsconnection)
+    exception_f = api.sanity_errors.pipe(op.first(), op.to_future())
+    async def raise_an_exception():
+        raise Exception("test add_task")
+    api.add_task(raise_an_exception(), 'raise an exception')
+    exception = await exception_f
+    assert str(exception) == 'deriv_api:raise an exception: test add_task'
+    api.clear()
 
 def add_req_id(response, req_id):
     response['echo_req']['req_id'] = req_id

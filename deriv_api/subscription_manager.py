@@ -94,7 +94,8 @@ class SubscriptionManager:
                 self.save_subs_id(key, response['subscription'])
             except Exception as err:
                 self.remove_key_on_error(key)
-        self.api.add_task(process_response())
+
+        self.api.add_task(process_response(), 'subs manager: process_response')
         return source
 
     async def forget(self, subs_id):

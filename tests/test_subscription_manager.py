@@ -37,8 +37,8 @@ class API:
             def next(self, error):
                 return error
         return SanityErrors()
-    def add_task(self, task):
-        asyncio.create_task(task, name='mocked_api')
+    def add_task(self, task, name):
+        asyncio.create_task(task, name=f"mocked_api:{name}")
 
 def test_get_msg_type():
     assert get_msg_type({'hello': 1}) is None
