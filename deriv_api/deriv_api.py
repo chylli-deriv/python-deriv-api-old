@@ -117,7 +117,6 @@ class DerivAPI(DerivAPICalls):
             # TODO onopen onclose, can be set by await connection
             req_id = response.get('req_id', None)
             if not req_id or req_id not in self.pending_requests:
-                # TODO how is this sanity_errors used
                 self.sanity_errors.on_next(APIError("Extra response"))
                 continue
             expect_response: Future = self.expect_response_types.get(response['msg_type'])
@@ -186,10 +185,6 @@ class DerivAPI(DerivAPICalls):
 
     async def subscribe(self, request):
         return await self.subscription_manager.subscribe(request)
-
-    # TODO fix this one
-    # def is_connection_closed(self):
-    #    return self.connection.ready_state == 2 or self.connection.ready_state == 3
 
     # TODO
     # 1 add all funcs taht include subscription_manager
