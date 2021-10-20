@@ -10,7 +10,7 @@ from typing import Optional
 # streams_list is the list of subscriptions msg_types available.
 # Please add / remove based on current available streams in api.
 # Refer https: // developers.binary.com /
-# TODO auto generate this one
+# TODO NEXT auto generate this one
 streams_list = ['balance', 'candles', 'p2p_advertiser', 'p2p_order', 'proposal',
                 'proposal_array', 'proposal_open_contract', 'ticks', 'ticks_history', 'transaction',
                 'website_status', 'buy']
@@ -94,13 +94,7 @@ class SubscriptionManager:
                 self.save_subs_id(key, response['subscription'])
             except Exception as err:
                 self.remove_key_on_error(key)
-        # TODO not async, create task, and push task to an array, and clear them at last
-        # TODO I guess waiting first response will cause the source miss the first one
-
-        await process_response()
-        # TODO wait to_future directly
-        # TODO no wait
-        #asyncio.wait(task)
+        self.api.add_task(process_response())
         return source
 
     # TODO refactor subs_id and sub_id
@@ -169,8 +163,6 @@ class SubscriptionManager:
             pass
 
         # Mark the source complete
-        # TODO is it complete ?
-        # MUST resolve
         orig_source.on_completed()
         orig_source.dispose()
 

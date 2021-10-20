@@ -333,6 +333,7 @@ async def test_reuse_poc_stream():
                            }
     wsconnection.add_data(buy_data)
     sub1 = await api.subscribe(buy_data['echo_req'])
+    await asyncio.sleep(0.1) # wait for setting reused stream
     sub2 = await api.subscribe({'proposal_open_contract': 1, 'contract_id': 1234567})
     assert id(sub1) == id(sub2)
     assert len(api.subscription_manager.buy_key_to_contract_id) == 1

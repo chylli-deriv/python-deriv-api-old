@@ -225,8 +225,6 @@ class DerivAPI(DerivAPICalls):
         self.connected.exception()  # fetch exception to avoid the warning of 'exception never retrieved'
         await self.wsconnection.close()
 
-    # TODO remove customfuture, only use async and await ?
-    # Or, don't export custom future in the public interfaces ?
     def expect_response(self, *msg_types):
         for msg_type in msg_types:
             if msg_type not in self.expect_response_types:
@@ -262,8 +260,6 @@ class DerivAPI(DerivAPICalls):
     def add_task(self, coroutine, name=''):
         name = 'deriv_api:' + name
         asyncio.create_task(coroutine, name=name)
-    # TODO optimize create_and_watch_task and wait_data_task
-    # TODO rewrite by `async with`
     # TODO check all create_task places, that should handle error itself by try catch
     def clear(self):
         for task in asyncio.all_tasks():
