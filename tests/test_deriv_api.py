@@ -98,24 +98,25 @@ def test_connect_parameter():
 @pytest.mark.asyncio
 async def test_deriv_api(mocker):
     mocker.patch('deriv_api.deriv_api.DerivAPI.api_connect', return_value='')
-    deriv_api_obj = deriv_api.DerivAPI(app_id=1234, endpoint='localhost')
-    assert(isinstance(deriv_api_obj, deriv_api.DerivAPI))
+    api = deriv_api.DerivAPI(app_id=1234, endpoint='localhost')
+    assert(isinstance(api, deriv_api.DerivAPI))
     await asyncio.sleep(0.1)
-    deriv_api_obj.clear()
+    await api.clear()
 
 @pytest.mark.asyncio
 async def test_get_url(mocker):
-    deriv_api_obj = get_deriv_api(mocker)
-    assert deriv_api_obj.get_url("localhost") == "wss://localhost"
-    assert deriv_api_obj.get_url("ws://localhost") == "ws://localhost"
+    api = get_deriv_api(mocker)
+    assert api.get_url("localhost") == "wss://localhost"
+    assert api.get_url("ws://localhost") == "ws://localhost"
     with pytest.raises(ConstructionError, match=r"Invalid URL:testurl"):
-        deriv_api_obj.get_url("testurl")
-    deriv_api_obj.clear()
+        api.get_url("testurl")
+    await asyncio.sleep(0.1)
+    await api.clear()
 
 def get_deriv_api(mocker):
     mocker.patch('deriv_api.deriv_api.DerivAPI.api_connect', return_value=CustomFuture().set_result(1))
-    deriv_api_obj = deriv_api.DerivAPI(app_id=1234, endpoint='localhost')
-    return deriv_api_obj
+    api = deriv_api.DerivAPI(app_id=1234, endpoint='localhost')
+    return api
 
 @pytest.mark.asyncio
 async def test_mocked_ws():
@@ -150,7 +151,7 @@ async def test_simple_send():
     assert await api.ticks(data2['echo_req']) == res2
     assert len(wsconnection.called['send']) == 2
     wsconnection.clear()
-    api.clear()
+    await api.clear()
 
 @pytest.mark.asyncio
 async def test_subscription():
@@ -185,7 +186,7 @@ async def test_subscription():
         '{"forget": "A11111", "req_id": 3}',
         '{"forget": "A22222", "req_id": 4}']
     wsconnection.clear()
-    api.clear()
+    await api.clear()
 
 @pytest.mark.asyncio
 async def test_forget():
@@ -214,7 +215,7 @@ async def test_forget():
     await asyncio.sleep(0.1)
     assert complete, 'subscription stopped after forget'
     wsconnection.clear()
-    api.clear()
+    await api.clear()
 
 
 @pytest.mark.asyncio
@@ -233,7 +234,7 @@ async def test_extra_response():
     except asyncio.exceptions.TimeoutError:
         assert False, "error data apppear timeout "
     wsconnection.clear()
-    api.clear()
+    await api.clear()
 
 @pytest.mark.asyncio
 async def test_response_error():
@@ -270,7 +271,7 @@ async def test_response_error():
     response = await sub1.pipe(op.first(), op.to_future())
     assert 'error' in response, "for the poc stream with out contract_id, the error response will not terminate the stream"
     wsconnection.clear()
-    api.clear()
+    await api.clear()
 
 @pytest.mark.asyncio
 async def test_cache():
@@ -286,7 +287,7 @@ async def test_cache():
     assert len(wsconnection.called['send']) == 1, 'get ping3 from cache, no send happen'
     assert ping1 == ping3, "ping3 is ping1 "
     wsconnection.clear()
-    api.clear()
+    await api.clear()
 
     wsconnection = MockedWs()
     api = deriv_api.DerivAPI(connection=wsconnection)
@@ -297,7 +298,7 @@ async def test_cache():
     assert len(wsconnection.called['send']) == 1, 'api.cache.ping can cache value. get ping2 from cache, no send happen'
     assert ping1 == ping2, "ping2 is ping1 "
     wsconnection.clear()
-    api.clear()
+    await api.clear()
 
 @pytest.mark.asyncio
 async def test_can_subscribe_one_source_many_times():
@@ -321,7 +322,7 @@ async def test_can_subscribe_one_source_many_times():
         '{"ticks": "R_50", "subscribe": 1, "req_id": 1}',
         '{"forget": "A11111", "req_id": 2}']
     wsconnection.clear()
-    api.clear()
+    await api.clear()
 
 @pytest.mark.asyncio
 async def test_reuse_poc_stream():
@@ -341,7 +342,7 @@ async def test_reuse_poc_stream():
     await api.forget('B111111')
     assert len(api.subscription_manager.buy_key_to_contract_id) == 0
     wsconnection.clear()
-    api.clear()
+    await api.clear()
 
 @pytest.mark.asyncio
 async def test_expect_response():
@@ -354,7 +355,7 @@ async def test_expect_response():
     assert get_ping.done(), 'get ping done'
     assert ping_result == await get_ping
     wsconnection.clear()
-    api.clear()
+    await api.clear()
 
 @pytest.mark.asyncio
 async def test_ws_disconnect():
@@ -377,16 +378,23 @@ async def test_ws_disconnect():
     wsconnection = MockedWs2()
     wsconnection.exception = ConnectionClosedOK(1000, 'Closed by api')
     api = deriv_api.DerivAPI(connection=wsconnection)
+    await asyncio.sleep(0.1)
+    api.wsconnection_from_inside = True
     last_error = api.sanity_errors.pipe(op.first(), op.to_future())
     await asyncio.sleep(0.1) # waiting for init finished
+    print("here 382")
     await api.disconnect() # it will set connected as 'Closed by disconnect', and cause MockedWs2 raising `test disconnect`
+    print("here 384")
     assert isinstance((await last_error), ConnectionClosedOK), 'sanity error get errors'
+    print("here 386")
     with pytest.raises(ConnectionClosedOK, match='Closed by disconnect'):
         await api.send({'ping': 1})  # send will get same error
+    print("here 389")
     with pytest.raises(ConnectionClosedOK, match='Closed by disconnect'):
         await api.connected # send will get same error
     wsconnection.clear()
-    api.clear()
+    print("here 391")
+    await api.clear()
 
     # closed by remote
     wsconnection = MockedWs2()
@@ -401,7 +409,7 @@ async def test_ws_disconnect():
     with pytest.raises(ConnectionClosedError, match='Closed by remote'):
         await api.connected  # send will get same error
     wsconnection.clear()
-    api.clear()
+    await api.clear()
 
 @pytest.mark.asyncio
 async def test_add_task():
@@ -413,7 +421,7 @@ async def test_add_task():
     api.add_task(raise_an_exception(), 'raise an exception')
     exception = await exception_f
     assert str(exception) == 'deriv_api:raise an exception: test add_task'
-    api.clear()
+    await api.clear()
 
 def add_req_id(response, req_id):
     response['echo_req']['req_id'] = req_id

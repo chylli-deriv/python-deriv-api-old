@@ -82,8 +82,7 @@ async def sample_calls():
     statement = await api.statement({"statement": 1, "description": 1, "limit": 100, "offset": 25})
     print(statement)
     print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!end!!!!!!!!!!!!!!!!!!!!1")
-    await api.disconnect()
-    api.clear()
+    await api.clear()
 
 
 asyncio.run(sample_calls())

@@ -50,6 +50,6 @@ async def sample_calls():
     ''' get assets '''
     assets = await api.cache.asset_index({"asset_index": 1})
     print(assets)
-    api.clear()
+    await api.clear()
 
 asyncio.run(sample_calls())

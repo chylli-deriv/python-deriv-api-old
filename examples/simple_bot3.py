@@ -32,8 +32,6 @@ async def sample_calls():
     #await api.forget(last_data['R_100']['subscription']['id'])
     await api.forget_all('ticks')
     await asyncio.sleep(5)
-
-
-    api.clear()
+    await api.clear()
 
 asyncio.run(sample_calls())

@@ -58,9 +58,10 @@ class DerivAPI(DerivAPICalls):
         cache = options.get('cache', InMemory())
         storage = options.get('storage')
         self.wsconnection: Optional[WebSocketClientProtocol] = None
-
+        self.wsconnection_from_inside = True
         if options.get('connection'):
             self.wsconnection: Optional[WebSocketClientProtocol] = options.get('connection')
+            self.wsconnection_from_inside = False
         else:
             if not options.get('app_id'):
                 raise ConstructionError('An app_id is required to connect to the API')
@@ -209,11 +210,14 @@ class DerivAPI(DerivAPICalls):
         return await self.subscription_manager.forget_all(*types);
 
     async def disconnect(self) -> None:
-        # TODO NEXT reconnect feature
-        self.shouldReconnect = False
+        if not self.connected.is_resolved():
+            return
         self.connected = CustomFuture().reject(ConnectionClosedOK(1000, 'Closed by disconnect'))
         self.connected.exception()  # fetch exception to avoid the warning of 'exception never retrieved'
-        await self.wsconnection.close()
+        if self.wsconnection_from_inside:
+            # TODO NEXT reconnect feature
+            self.shouldReconnect = False
+            await self.wsconnection.close()
 
     def expect_response(self, *msg_types):
         for msg_type in msg_types:
@@ -258,9 +262,8 @@ class DerivAPI(DerivAPICalls):
 
         asyncio.create_task(wrap_coro(coroutine, name), name=name)
 
-    # TODO disconnect function should check if the wsconnection is created itself or by args
-    # and then add diconnect into clear
-    def clear(self):
+    async def clear(self):
+        await self.disconnect()
         for task in asyncio.all_tasks():
             print(f"checking task {task.get_name()}")
             if re.match(r"^deriv_api:",task.get_name()):
