@@ -97,11 +97,10 @@ class SubscriptionManager:
         self.api.add_task(process_response())
         return source
 
-    # TODO refactor subs_id and sub_id
-    async def forget(self, sub_id):
-        self.complete_subs_by_ids(sub_id)
+    async def forget(self, subs_id):
+        self.complete_subs_by_ids(subs_id)
         # TODO  will be better to send for get first and then complete subs by ids ?
-        return await self.api.send({'forget': sub_id})
+        return await self.api.send({'forget': subs_id})
 
     async def forget_all(self, *types):
         # To include subscriptions that were automatically unsubscribed
@@ -113,10 +112,10 @@ class SubscriptionManager:
             self.subs_per_msg_type[t] = []
         return await self.api.send({'forget_all': list(types)})
 
-    def complete_subs_by_ids(self, *sub_ids):
-        for sub_id in sub_ids:
-            if sub_id in self.subs_id_to_key:
-                key = self.subs_id_to_key[sub_id]
+    def complete_subs_by_ids(self, *subs_ids):
+        for subs_id in subs_ids:
+            if subs_id in self.subs_id_to_key:
+                key = self.subs_id_to_key[subs_id]
                 self.complete_subs_by_key(key)
 
     def save_subs_id(self, key, subscription):
