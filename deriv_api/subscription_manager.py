@@ -99,7 +99,6 @@ class SubscriptionManager:
 
     async def forget(self, subs_id):
         self.complete_subs_by_ids(subs_id)
-        # TODO  will be better to send for get first and then complete subs by ids ?
         return await self.api.send({'forget': subs_id})
 
     async def forget_all(self, *types):

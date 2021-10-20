@@ -89,16 +89,11 @@ class DerivAPI(DerivAPICalls):
         self.subscription_manager = SubscriptionManager(self)
         self.expect_response_types = {}
         self.wait_data_task = CustomFuture().set_result(1)
-
-        self.add_task(self.__connect_and_start_watching_data(), 'connect_and_start_watching_data')
-
-    async def __connect_and_start_watching_data(self):
-        await self.api_connect()
-        # TODO this create_task is needn't ? we have connect_and_start_watching_data already
-        self.add_task(self.__wait_data(), 'wait_data')
-        return
+        self.add_task(self.api_connect())
+        self.add_task(self.__wait_data())
 
     async def __wait_data(self):
+        await self.connected
         while self.connected.is_resolved():
             try:
                 data = await self.wsconnection.recv()
@@ -112,9 +107,9 @@ class DerivAPI(DerivAPICalls):
                 self.sanity_errors.on_next(err)
                 continue
             response = json.loads(data)
-            # TODO add self.events stream
+            # TODO NEXT add self.events stream
 
-            # TODO onopen onclose, can be set by await connection
+            # TODO NEXT onopen onclose, can be set by await connection
             req_id = response.get('req_id', None)
             if not req_id or req_id not in self.pending_requests:
                 self.sanity_errors.on_next(APIError("Extra response"))
@@ -186,13 +181,6 @@ class DerivAPI(DerivAPICalls):
     async def subscribe(self, request):
         return await self.subscription_manager.subscribe(request)
 
-    # TODO
-    # 1 add all funcs taht include subscription_manager
-    # 2. check all functs that subscription_manager will called
-    # 3. check async on all funcs of 1 and 2
-    # 4. some function like "send" or manager `create_new_source` will await the first response
-    # 5. make sure that first response can be got by other subscription
-    # 6. dict.get(key, value) to set value
     def send_and_get_source(self, request: dict):
         pending = Subject()
         if 'req_id' not in request:
