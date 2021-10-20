@@ -93,17 +93,13 @@ class DerivAPI(DerivAPICalls):
         self.add_task(self.__connect_and_start_watching_data(), 'connect_and_start_watching_data')
 
     async def __connect_and_start_watching_data(self):
-        print("will start api_connect")
         await self.api_connect()
-        print("connect_and_start .. will start wait_data")
         # TODO this create_task is needn't ? we have connect_and_start_watching_data already
         self.add_task(self.__wait_data(), 'wait_data')
         return
 
     async def __wait_data(self):
-        print("starting wait_data")
         while self.connected.is_resolved():
-            print("in while")
             try:
                 data = await self.wsconnection.recv()
             except ConnectionClosed as err:
@@ -113,7 +109,8 @@ class DerivAPI(DerivAPICalls):
                 self.sanity_errors.on_next(err)
                 break
             except Exception as err:
-                print(f"error happened {err}")
+                self.sanity_errors.on_next(err)
+                continue
             response = json.loads(data)
             # TODO add self.events stream
 
@@ -170,16 +167,12 @@ class DerivAPI(DerivAPICalls):
         return url
 
     async def api_connect(self) -> websockets.WebSocketClientProtocol:
-        print("in api_connect")
         if not self.wsconnection and self.shouldReconnect:
-            print("calling ws.connect")
             self.wsconnection = await websockets.connect(self.api_url)
-        print("after connect")
         if self.connected.is_pending():
             self.connected.resolve(True)
         else:
             self.connected = CustomFuture().resolve(True)
-        print("connected set true")
         return self.wsconnection
 
     async def send(self, request: dict) -> dict:

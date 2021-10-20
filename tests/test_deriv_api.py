@@ -368,9 +368,7 @@ async def test_ws_disconnect():
             exc = await self.closed
             raise exc
         async def recv(self):
-            print("awaiting closed")
             exc = await self.closed
-            print("raising error")
             raise exc
 
     # closed by api
